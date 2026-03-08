@@ -1,0 +1,484 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coin Compass Cloudflare</title>
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #121a2b;
+      --panel-2: #172036;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #25304a;
+      --accent: #60a5fa;
+      --good: #34d399;
+      --bad: #f87171;
+      --warn: #fbbf24;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    a { color: inherit; }
+    .app {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+    }
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: rgba(8, 14, 26, 0.88);
+      backdrop-filter: blur(10px);
+      padding: 20px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .brand-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+    .brand-text h1 { font-size: 18px; margin: 0; }
+    .brand-text p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .nav { display: grid; gap: 8px; margin-top: 18px; }
+    .nav button, .button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+    .nav button.active, .nav button:hover, .button:hover {
+      background: var(--panel-2);
+      border-color: #35507a;
+      transform: translateY(-1px);
+    }
+    .sidebar-footer {
+      margin-top: 24px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .main { padding: 24px; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+    .headline h2 { margin: 0; font-size: 28px; }
+    .headline p { margin: 6px 0 0; color: var(--muted); }
+    .stack, .grid { display: grid; gap: 18px; }
+    .grid.kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .card {
+      background: rgba(18, 26, 43, 0.92);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .card h3 { margin: 0 0 8px; font-size: 16px; }
+    .muted { color: var(--muted); }
+    .good { color: var(--good); }
+    .bad { color: var(--bad); }
+    .warn { color: var(--warn); }
+    .kpi-label { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+    .kpi-value { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .space { justify-content: space-between; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: #111827;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .status-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--warn); display: inline-block; }
+    .status-dot.ok { background: var(--good); }
+    .status-dot.fail { background: var(--bad); }
+    .table-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 14px; }
+    table { width: 100%; border-collapse: collapse; min-width: 720px; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid var(--border); text-align: left; font-size: 14px; }
+    th { color: var(--muted); background: rgba(12, 18, 30, 0.9); position: sticky; top: 0; }
+    tr:last-child td { border-bottom: 0; }
+    form { display: grid; gap: 14px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    label { display: grid; gap: 8px; font-size: 14px; color: var(--muted); }
+    input, select, textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0c1322;
+      color: var(--text);
+      padding: 12px 14px;
+      font: inherit;
+    }
+    textarea { min-height: 88px; resize: vertical; }
+    .button.primary { background: linear-gradient(135deg, #2563eb, #4f46e5); border-color: transparent; }
+    .button.ghost { background: transparent; }
+    .empty { padding: 28px; border: 1px dashed var(--border); border-radius: 14px; text-align: center; color: var(--muted); }
+    .footer-note { margin-top: 20px; font-size: 13px; color: var(--muted); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+    @media (max-width: 1100px) { .grid.kpis, .grid.two { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border); }
+      .main { padding: 18px; }
+      .topbar { flex-direction: column; }
+    }
+    @media (max-width: 640px) {
+      .grid.kpis, .grid.two, .form-grid { grid-template-columns: 1fr; }
+      .headline h2 { font-size: 23px; }
+      .kpi-value { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">CC</div>
+        <div class="brand-text">
+          <h1>Coin Compass</h1>
+          <p>Static frontend, Worker backend</p>
+        </div>
+      </div>
+      <nav class="nav" id="nav"></nav>
+      <div class="sidebar-footer">
+        This repo is built to be deployed from GitHub to Cloudflare Pages, with the API and scheduled jobs running in a separate Cloudflare Worker.
+      </div>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <div class="headline">
+          <h2 id="page-title">Overview</h2>
+          <p id="page-subtitle">Monitor the Worker, prices, and app state from one static file.</p>
+        </div>
+        <div class="row">
+          <div class="pill"><span class="status-dot" id="status-dot"></span><span id="status-text">Checking backend...</span></div>
+          <button class="button" id="refresh-button" type="button">Refresh</button>
+        </div>
+      </div>
+      <div id="view" class="stack"></div>
+      <div class="footer-note">Edit <span class="mono">const API_BASE</span> near the top of the script after your Worker is deployed.</div>
+    </main>
+  </div>
+  <script>
+    const API_BASE = "https://coin-compass-api.taheito26.workers.dev";
+
+    const state = {
+      status: null,
+      prices: null,
+      transactions: [],
+      prefs: null,
+      route: "overview",
+      loading: false,
+      error: ""
+    };
+
+    const routes = [
+      { id: "overview", label: "Overview", subtitle: "Health, latest prices, and quick stats." },
+      { id: "prices", label: "Prices", subtitle: "Live price cache coming from the Worker and KV." },
+      { id: "transactions", label: "Transactions", subtitle: "Sample app data persisted in KV through the Worker." },
+      { id: "settings", label: "Settings", subtitle: "Tracking preferences stored server-side in KV." }
+    ];
+
+    function $(id) { return document.getElementById(id); }
+    function formatDate(ts) { return ts ? new Date(ts).toLocaleString() : "n/a"; }
+    function formatNumber(value, digits = 2) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits }) : "-";
+    }
+
+    async function api(path, options = {}) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options
+      });
+      if (!res.ok) {
+        let message = `Request failed, ${res.status}`;
+        try {
+          const data = await res.json();
+          if (data && data.error) message = data.error;
+        } catch (_) {}
+        throw new Error(message);
+      }
+      return res.json();
+    }
+
+    function renderNav() {
+      const nav = $("nav");
+      nav.innerHTML = "";
+      routes.forEach(route => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = route.label;
+        btn.className = route.id === state.route ? "active" : "";
+        btn.onclick = () => { state.route = route.id; render(); };
+        nav.appendChild(btn);
+      });
+    }
+
+    function updateHeader() {
+      const route = routes.find(r => r.id === state.route);
+      $("page-title").textContent = route.label;
+      $("page-subtitle").textContent = route.subtitle;
+      const dot = $("status-dot");
+      const text = $("status-text");
+      dot.className = "status-dot";
+      if (!state.status) {
+        text.textContent = state.loading ? "Checking backend..." : "No data yet";
+        return;
+      }
+      if (state.status.ok) {
+        dot.classList.add("ok");
+        text.textContent = `Backend healthy, ${formatDate(state.status.lastUpdate)}`;
+      } else {
+        dot.classList.add("fail");
+        text.textContent = "Backend reachable, but price cache is empty";
+      }
+    }
+
+    function renderKpi(label, value, note, tone = "") {
+      return `<div class="card"><div class="kpi-label">${label}</div><div class="kpi-value ${tone}">${value}</div><div class="muted">${note}</div></div>`;
+    }
+
+    function renderOverview() {
+      const latest = state.prices?.prices || {};
+      const topAssets = Object.entries(latest).slice(0, 5).map(([symbol, info]) => `
+        <tr><td>${symbol}</td><td>$${formatNumber(info.usd)}</td><td>${formatDate(info.updatedAt || state.prices?.ts)}</td></tr>
+      `).join("");
+      return `
+        <section class="grid kpis">
+          ${renderKpi("Backend status", state.status?.ok ? "Healthy" : "Not ready", "Cloudflare Worker /api/status", state.status?.ok ? "good" : "warn")}
+          ${renderKpi("Tracked assets", String(Object.keys(latest).length), "Assets with latest cached prices")}
+          ${renderKpi("Transactions", String(state.transactions.length), "Persisted in APP_KV")}
+          ${renderKpi("Watchlist size", String(state.prefs?.watchlist?.length || 0), "Server-side tracking preferences")}
+        </section>
+        <section class="grid two">
+          <div class="card">
+            <div class="row space"><h3>Latest prices</h3><span class="pill">Updated ${formatDate(state.prices?.ts)}</span></div>
+            <div class="table-wrap" style="margin-top: 12px;">
+              <table>
+                <thead><tr><th>Asset</th><th>USD</th><th>Updated</th></tr></thead>
+                <tbody>
+                  ${topAssets || `<tr><td colspan="3"><div class="empty">No prices yet. Deploy the Worker, create APP_KV, then wait for the first cron poll or use Refresh.</div></td></tr>`}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <h3>What this starter gives you</h3>
+            <ul class="muted" style="margin: 0; padding-left: 18px; line-height: 1.7;">
+              <li>One static frontend file for Cloudflare Pages</li>
+              <li>One plain Worker backend for API plus scheduled polling</li>
+              <li>One KV namespace for cached prices, history, transactions, and preferences</li>
+              <li>GitHub Action for backend deploy, Pages Git integration for frontend deploy</li>
+            </ul>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderPrices() {
+      const rows = Object.entries(state.prices?.prices || {}).map(([symbol, info]) => `
+        <tr><td>${symbol}</td><td>$${formatNumber(info.usd)}</td><td>${formatDate(info.updatedAt || state.prices?.ts)}</td></tr>
+      `).join("");
+      return `
+        <div class="card">
+          <div class="row space"><h3>Price cache</h3><button class="button" type="button" onclick="refreshAll()">Refresh data</button></div>
+          <p class="muted">The Worker stores the latest price object and a rolling history in KV. The scheduled handler polls CoinGecko on a cron.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Asset</th><th>USD</th><th>Updated</th></tr></thead>
+              <tbody>${rows || `<tr><td colspan="3"><div class="empty">No price data yet.</div></td></tr>`}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderTransactions() {
+      const rows = state.transactions.map(item => `
+        <tr><td>${formatDate(item.timestamp)}</td><td>${item.type}</td><td>${item.assetSymbol}</td><td>${formatNumber(item.qty, 6)}</td><td>$${formatNumber(item.price)}</td><td>${item.note || "-"}</td></tr>
+      `).join("");
+      return `
+        <div class="grid two">
+          <div class="card">
+            <h3>Add transaction</h3>
+            <form id="tx-form">
+              <div class="form-grid">
+                <label>Type
+                  <select name="type" required><option value="buy">buy</option><option value="sell">sell</option></select>
+                </label>
+                <label>Asset symbol
+                  <select name="assetSymbol" required>
+                    <option value="BTC">BTC</option><option value="ETH">ETH</option><option value="SOL">SOL</option><option value="XRP">XRP</option><option value="BNB">BNB</option><option value="USDT">USDT</option>
+                  </select>
+                </label>
+                <label>Quantity<input name="qty" type="number" step="0.000001" min="0" required /></label>
+                <label>Price in USD<input name="price" type="number" step="0.000001" min="0" required /></label>
+              </div>
+              <label>Note<textarea name="note" placeholder="Optional note"></textarea></label>
+              <div class="row"><button class="button primary" type="submit">Save transaction</button></div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>Saved transactions</h3>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Timestamp</th><th>Type</th><th>Asset</th><th>Qty</th><th>Price</th><th>Note</th></tr></thead>
+                <tbody>${rows || `<tr><td colspan="6"><div class="empty">No transactions saved yet.</div></td></tr>`}</tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSettings() {
+      const prefs = state.prefs || { baseCurrency: "USD", watchlist: ["BTC", "ETH", "SOL"] };
+      return `
+        <div class="grid two">
+          <div class="card">
+            <h3>Tracking preferences</h3>
+            <form id="prefs-form">
+              <label>Base currency<select name="baseCurrency"><option value="USD" ${prefs.baseCurrency === "USD" ? "selected" : ""}>USD</option></select></label>
+              <label>Watchlist, comma-separated symbols<input name="watchlist" value="${(prefs.watchlist || []).join(", ")}" /></label>
+              <div class="row"><button class="button primary" type="submit">Save preferences</button></div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>Deployment values</h3>
+            <p class="muted">After deploying the Worker, replace the API constant in this file with your Worker URL.</p>
+            <p class="mono">const API_BASE = "${API_BASE}";</p>
+            <p class="muted">Then commit that edit to GitHub and Cloudflare Pages will redeploy automatically.</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function bindForms() {
+      const txForm = $("tx-form");
+      if (txForm) {
+        txForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const form = new FormData(txForm);
+          const payload = {
+            type: String(form.get("type") || "buy"),
+            assetSymbol: String(form.get("assetSymbol") || "BTC"),
+            qty: Number(form.get("qty")),
+            price: Number(form.get("price")),
+            note: String(form.get("note") || "").trim()
+          };
+          try {
+            await api("/api/transactions", { method: "POST", body: JSON.stringify(payload) });
+            txForm.reset();
+            await refreshAll();
+            state.route = "transactions";
+            render();
+          } catch (error) { alert(error.message); }
+        });
+      }
+      const prefsForm = $("prefs-form");
+      if (prefsForm) {
+        prefsForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const form = new FormData(prefsForm);
+          const payload = {
+            baseCurrency: String(form.get("baseCurrency") || "USD"),
+            watchlist: String(form.get("watchlist") || "").split(",").map(v => v.trim().toUpperCase()).filter(Boolean)
+          };
+          try {
+            await api("/api/tracking-preferences", { method: "PUT", body: JSON.stringify(payload) });
+            await refreshAll();
+            state.route = "settings";
+            render();
+          } catch (error) { alert(error.message); }
+        });
+      }
+    }
+
+    function render() {
+      renderNav();
+      updateHeader();
+      const view = $("view");
+      if (state.error) {
+        view.innerHTML = `<div class="card"><div class="bad"><strong>Error:</strong> ${state.error}</div><p class="muted">Check your Worker URL and Cloudflare deployment settings.</p></div>`;
+        return;
+      }
+      if (state.loading && !state.status) {
+        view.innerHTML = `<div class="card"><div class="empty">Loading...</div></div>`;
+        return;
+      }
+      if (state.route === "overview") view.innerHTML = renderOverview();
+      if (state.route === "prices") view.innerHTML = renderPrices();
+      if (state.route === "transactions") view.innerHTML = renderTransactions();
+      if (state.route === "settings") view.innerHTML = renderSettings();
+      bindForms();
+    }
+
+    async function refreshAll() {
+      state.loading = true;
+      state.error = "";
+      render();
+      try {
+        const [status, prices, transactions, prefs] = await Promise.all([
+          api("/api/status"),
+          api("/api/prices"),
+          api("/api/transactions"),
+          api("/api/tracking-preferences")
+        ]);
+        state.status = status;
+        state.prices = prices;
+        state.transactions = transactions.items || [];
+        state.prefs = prefs;
+      } catch (error) {
+        state.error = error.message;
+      } finally {
+        state.loading = false;
+        render();
+      }
+    }
+
+    $("refresh-button").addEventListener("click", refreshAll);
+    render();
+    refreshAll();
+  </script>
+</body>
+</html>
+

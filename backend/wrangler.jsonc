@@ -1,0 +1,19 @@
+﻿{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "coin-compass-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-03-08",
+  "observability": {
+    "enabled": true
+  },
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
+  "kv_namespaces": [
+    {
+      "binding": "APP_KV",
+      "id": "ff036b42658f4ca897af07e995f857f5"
+    }
+  ]
+}
+
