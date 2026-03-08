@@ -1,0 +1,2357 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoinTracker Cloudflare</title>
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #121a2b;
+      --panel-2: #172036;
+      --panel-3: #1e293b;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --border: #25304a;
+      --accent: #60a5fa;
+      --accent-2: #7c3aed;
+      --good: #34d399;
+      --bad: #f87171;
+      --warn: #fbbf24;
+      --shadow: 0 14px 30px rgba(0, 0, 0, 0.25);
+      --radius: 16px;
+      --sidebar-width: 270px;
+      --gap: 18px;
+      --max-width: 1600px;
+    }
+
+    body.theme-midnight {
+      --bg: #050816;
+      --panel: #0f172a;
+      --panel-2: #111c33;
+      --panel-3: #172554;
+      --border: #1e3a5f;
+      --accent: #38bdf8;
+    }
+
+    body.theme-slate {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --panel-2: #334155;
+      --panel-3: #475569;
+      --border: #475569;
+      --accent: #22c55e;
+    }
+
+    body.layout-compact {
+      --gap: 14px;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, var(--bg) 0%, #111827 100%);
+      color: var(--text);
+    }
+    a { color: inherit; text-decoration: none; }
+    button, input, select, textarea { font: inherit; }
+    .app {
+      display: grid;
+      grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+      min-height: 100vh;
+    }
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      border-right: 1px solid var(--border);
+      background: rgba(8, 12, 24, 0.92);
+      backdrop-filter: blur(12px);
+      padding: 18px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .brand-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      box-shadow: var(--shadow);
+    }
+    .brand-text h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0.2px;
+    }
+    .brand-text p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .search-box {
+      margin-bottom: 14px;
+    }
+    .search-box input {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      padding: 12px 14px;
+    }
+    .search-results {
+      margin-top: 8px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--panel);
+      display: none;
+    }
+    .search-results.visible { display: block; }
+    .search-results button {
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      border-bottom: 1px solid rgba(37, 48, 74, 0.7);
+      cursor: pointer;
+    }
+    .search-results button:last-child { border-bottom: 0; }
+    .search-results button:hover { background: var(--panel-2); }
+    .nav {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .nav button,
+    .button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: 0.18s ease;
+    }
+    .nav button.active,
+    .nav button:hover,
+    .button:hover {
+      background: var(--panel-2);
+      border-color: #3b82f6;
+      transform: translateY(-1px);
+    }
+    .button.primary {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      border-color: transparent;
+    }
+    .button.good { background: linear-gradient(135deg, #059669, #10b981); border-color: transparent; }
+    .button.warn { background: linear-gradient(135deg, #d97706, #f59e0b); border-color: transparent; }
+    .button.ghost { background: transparent; }
+    .button.danger { background: linear-gradient(135deg, #dc2626, #ef4444); border-color: transparent; }
+    .sidebar-footer {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .main {
+      padding: 24px;
+      width: 100%;
+      max-width: var(--max-width);
+      margin: 0 auto;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .headline h2 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .headline p {
+      margin: 6px 0 0;
+      color: var(--muted);
+    }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .space { justify-content: space-between; }
+    .stack, .grid {
+      display: grid;
+      gap: var(--gap);
+    }
+    .grid.kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.auto { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .card {
+      background: rgba(18, 26, 43, 0.94);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .card h3, .card h4 {
+      margin: 0 0 8px;
+    }
+    .section-title { margin-bottom: 12px; }
+    .muted { color: var(--muted); }
+    .good { color: var(--good); }
+    .bad { color: var(--bad); }
+    .warn { color: var(--warn); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--warn);
+      display: inline-block;
+    }
+    .status-dot.ok { background: var(--good); }
+    .status-dot.fail { background: var(--bad); }
+    .kpi-label {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    .kpi-value {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+    table {
+      width: 100%;
+      min-width: 820px;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      font-size: 14px;
+      vertical-align: top;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: rgba(12, 18, 30, 0.95);
+      color: var(--muted);
+      z-index: 1;
+    }
+    tr:last-child td { border-bottom: 0; }
+    .empty {
+      padding: 28px;
+      border-radius: 14px;
+      border: 1px dashed var(--border);
+      text-align: center;
+      color: var(--muted);
+    }
+    form { display: grid; gap: 14px; }
+    .form-grid { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .form-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    label {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    input, select, textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0c1322;
+      color: var(--text);
+      padding: 12px 14px;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    .footer-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .mini-list {
+      display: grid;
+      gap: 10px;
+    }
+    .mini-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(12, 18, 30, 0.55);
+      border: 1px solid rgba(37, 48, 74, 0.75);
+    }
+    .progress {
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #0c1322;
+      border: 1px solid var(--border);
+    }
+    .progress > span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, #2563eb, #34d399);
+      width: 0%;
+    }
+    .heatmap {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+    }
+    .heat-cell {
+      border-radius: 14px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      min-height: 88px;
+      display: grid;
+      gap: 6px;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .calendar-head {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0 4px 8px;
+    }
+    .calendar-day {
+      min-height: 120px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(12, 18, 30, 0.7);
+      padding: 10px;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .calendar-day.is-empty { opacity: 0.35; cursor: default; }
+    .calendar-day strong { font-size: 15px; }
+    .market-toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .toggle-group {
+      display: inline-flex;
+      background: #0c1322;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .toggle-group button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+    .toggle-group button.active {
+      background: var(--panel-2);
+      color: var(--text);
+    }
+    .bubble-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+    }
+    .bubble {
+      aspect-ratio: 1;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 18px;
+      color: white;
+      font-weight: 700;
+      border: 1px solid rgba(255,255,255,0.16);
+      box-shadow: var(--shadow);
+    }
+    .bubble small { display: block; font-weight: 500; opacity: 0.9; }
+    .upload-drop {
+      padding: 22px;
+      border-radius: 14px;
+      border: 2px dashed var(--border);
+      text-align: center;
+      color: var(--muted);
+      background: rgba(12, 18, 30, 0.55);
+    }
+    .checklist {
+      display: grid;
+      gap: 8px;
+    }
+    .checklist label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text);
+    }
+    .hidden { display: none !important; }
+    .right {
+      text-align: right;
+    }
+    .notification-area {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      display: grid;
+      gap: 10px;
+      z-index: 1000;
+      max-width: 360px;
+    }
+    .toast {
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 12px;
+    }
+    .toast.good { border-color: rgba(52, 211, 153, 0.4); }
+    .toast.bad { border-color: rgba(248, 113, 113, 0.4); }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 999;
+    }
+    .modal-backdrop.visible { display: flex; }
+    .modal {
+      width: min(920px, 100%);
+      max-height: 85vh;
+      overflow: auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .linkish {
+      background: transparent;
+      border: 0;
+      color: var(--accent);
+      cursor: pointer;
+      padding: 0;
+    }
+    .inline-help {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    @media (max-width: 1180px) {
+      .grid.kpis, .grid.two, .grid.three { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border); }
+      .main { padding: 18px; }
+      .topbar { flex-direction: column; }
+    }
+    @media (max-width: 680px) {
+      .grid.kpis, .grid.two, .grid.three, .form-grid, .form-grid.three { grid-template-columns: 1fr; }
+      .headline h2 { font-size: 24px; }
+      .kpi-value { font-size: 24px; }
+      .calendar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body class="theme-dark layout-comfortable">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">CT</div>
+        <div class="brand-text">
+          <h1>CryptoTracker</h1>
+          <p>v1 · Portfolio, static frontend + Worker backend</p>
+        </div>
+      </div>
+
+      <div class="search-box">
+        <input id="global-search" type="search" placeholder="Search pages, assets, watchlist" />
+        <div id="search-results" class="search-results"></div>
+      </div>
+
+      <nav id="nav" class="nav"></nav>
+
+      <div class="sidebar-footer">
+        This single-file frontend now exposes the live product surface directly in <span class="mono">index.html</span>, while prices and backend health come from the Worker at <span class="mono" id="api-base-label"></span>.
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="headline">
+          <h2 id="page-title">Dashboard</h2>
+          <p id="page-subtitle">KPIs, allocation, heatmap, top positions, and deployment health.</p>
+        </div>
+        <div class="row">
+          <div class="pill"><span class="status-dot" id="status-dot"></span><span id="status-text">Checking backend...</span></div>
+          <button class="button" id="refresh-button" type="button">Refresh</button>
+        </div>
+      </div>
+
+      <div id="view" class="stack"></div>
+
+      <div class="footer-note">
+        This file is local-first. Prices and status are live from the Worker, while portfolio, imports, alerts, snapshots, and settings persist in browser storage unless you extend the backend further.
+      </div>
+    </main>
+  </div>
+
+  <div id="modal-backdrop" class="modal-backdrop">
+    <div class="modal">
+      <div class="row space section-title">
+        <h3 id="modal-title">Details</h3>
+        <button class="button ghost" type="button" id="modal-close">Close</button>
+      </div>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <div id="notification-area" class="notification-area"></div>
+
+  <script>
+    const API_BASE = "https://coin-compass-api.taheito26.workers.dev";
+
+    const STORAGE_KEYS = {
+      transactions: "ct_transactions_v3",
+      alerts: "ct_alerts_v1",
+      prefs: "ct_prefs_v1",
+      snapshots: "ct_snapshots_v1",
+      imports: "ct_imports_v1",
+      manualHoldings: "ct_manual_holdings_v1",
+      watchlist: "ct_watchlist_v1"
+    };
+
+    const KNOWN_ASSETS = ["BTC", "ETH", "SOL", "XRP", "BNB", "USDT"];
+    const CALENDAR_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    const routes = [
+      { id: "dashboard", label: "Dashboard", subtitle: "KPIs, allocation, heatmap, and top positions." },
+      { id: "assets", label: "Assets", subtitle: "Portfolio positions, lots, value, and P&L." },
+      { id: "calendar", label: "Calendar", subtitle: "Daily P&L view with coin filters and drilldown." },
+      { id: "ledger", label: "Ledger", subtitle: "Journal, import shortcuts, and manual transaction entry." },
+      { id: "markets", label: "Live Markets", subtitle: "Bubbles, prices, and watchlist monitoring." },
+      { id: "vault", label: "Vault", subtitle: "Snapshots, backups, import/export, and clear data." },
+      { id: "settings", label: "Settings", subtitle: "Layout, themes, accounting method, and base currency." },
+      { id: "import", label: "Import", subtitle: "Spot-only CSV import for Binance, Bybit, OKX, and Gate.io." },
+      { id: "alerts", label: "Alerts", subtitle: "Local threshold-based alert engine." },
+      { id: "dca", label: "DCA", subtitle: "Manual holdings manager with asset-level summary." }
+    ];
+
+    const state = {
+      route: "dashboard",
+      status: null,
+      prices: null,
+      marketRows: [],
+      transactions: [],
+      alerts: [],
+      prefs: {
+        layout: "comfortable",
+        theme: "dark",
+        trackingMethod: "FIFO",
+        baseCurrency: "USD",
+        watchlist: ["BTC", "ETH", "SOL"]
+      },
+      snapshots: [],
+      imports: [],
+      manualHoldings: [],
+      loading: false,
+      error: "",
+      searchResults: [],
+      filters: {
+        calendarMonth: new Date().getMonth(),
+        calendarYear: new Date().getFullYear(),
+        calendarSymbols: [],
+        marketMode: "bubbles",
+        marketRange: "24h",
+        marketCount: 500,
+        assetColumns: {
+          symbol: true,
+          qty: true,
+          avgCost: true,
+          livePrice: true,
+          costBasis: true,
+          marketValue: true,
+          unrealized: true,
+          realized: true,
+          allocation: true,
+          priceUpdated: true
+        }
+      },
+      portfolio: {
+        positions: [],
+        totalMarketValue: 0,
+        totalCost: 0,
+        totalPnl: 0,
+        totalPnlPercent: 0,
+        realizedPnl: 0,
+        assetCount: 0,
+        transactionCount: 0,
+        priceAge: 0,
+        topPositions: []
+      }
+    };
+
+    function $(id) { return document.getElementById(id); }
+
+    function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+    function nowTs() { return Date.now(); }
+
+    function formatDate(ts) {
+      return ts ? new Date(ts).toLocaleString() : "n/a";
+    }
+
+    function formatDateShort(ts) {
+      return ts ? new Date(ts).toLocaleDateString() : "n/a";
+    }
+
+    function formatNumber(value, digits = 2) {
+      const n = Number(value);
+      return Number.isFinite(n)
+        ? n.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits })
+        : "-";
+    }
+
+    function formatCurrency(value, digits = 2) {
+      const n = Number(value);
+      return Number.isFinite(n)
+        ? `$${n.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits })}`
+        : "-";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function toInputDate(ts) {
+      const d = new Date(ts || Date.now());
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function getStorage(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : clone(fallback);
+      } catch (_) {
+        return clone(fallback);
+      }
+    }
+
+    function setStorage(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function notify(message, tone = "good") {
+      const area = $("notification-area");
+      const node = document.createElement("div");
+      node.className = `toast ${tone}`;
+      node.innerHTML = escapeHtml(message);
+      area.appendChild(node);
+      setTimeout(() => node.remove(), 3000);
+    }
+
+    function openModal(title, html) {
+      $("modal-title").textContent = title;
+      $("modal-content").innerHTML = html;
+      $("modal-backdrop").classList.add("visible");
+    }
+
+    function closeModal() {
+      $("modal-backdrop").classList.remove("visible");
+    }
+
+    async function api(path, options = {}) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options
+      });
+
+      if (!res.ok) {
+        let message = `Request failed, ${res.status}`;
+        try {
+          const data = await res.json();
+          if (data && data.error) message = data.error;
+        } catch (_) {}
+        throw new Error(message);
+      }
+
+      return res.json();
+    }
+
+    function loadLocalState() {
+      state.transactions = getStorage(STORAGE_KEYS.transactions, []);
+      state.alerts = getStorage(STORAGE_KEYS.alerts, []);
+      state.prefs = { ...state.prefs, ...getStorage(STORAGE_KEYS.prefs, state.prefs) };
+      state.snapshots = getStorage(STORAGE_KEYS.snapshots, []);
+      state.imports = getStorage(STORAGE_KEYS.imports, []);
+      state.manualHoldings = getStorage(STORAGE_KEYS.manualHoldings, []);
+    }
+
+    function persistAll() {
+      setStorage(STORAGE_KEYS.transactions, state.transactions);
+      setStorage(STORAGE_KEYS.alerts, state.alerts);
+      setStorage(STORAGE_KEYS.prefs, state.prefs);
+      setStorage(STORAGE_KEYS.snapshots, state.snapshots);
+      setStorage(STORAGE_KEYS.imports, state.imports);
+      setStorage(STORAGE_KEYS.manualHoldings, state.manualHoldings);
+      applyPrefs();
+    }
+
+    function applyPrefs() {
+      document.body.classList.remove("theme-dark", "theme-midnight", "theme-slate", "layout-comfortable", "layout-compact");
+      document.body.classList.add(`theme-${(state.prefs.theme || "dark").toLowerCase()}`);
+      document.body.classList.add(`layout-${(state.prefs.layout || "comfortable").toLowerCase()}`);
+    }
+
+    function updateHeader() {
+      const route = routes.find(r => r.id === state.route) || routes[0];
+      $("page-title").textContent = route.label;
+      $("page-subtitle").textContent = route.subtitle;
+      $("api-base-label").textContent = API_BASE;
+
+      const dot = $("status-dot");
+      const text = $("status-text");
+      dot.className = "status-dot";
+      if (!state.status) {
+        text.textContent = state.loading ? "Checking backend..." : "No data yet";
+        return;
+      }
+      if (state.status.ok) {
+        dot.classList.add("ok");
+        text.textContent = `Healthy, ${state.status.provider || "unknown"} provider, ${formatDate(state.status.lastUpdate)}`;
+      } else {
+        dot.classList.add("fail");
+        text.textContent = "Backend reachable, but cache is not ready";
+      }
+    }
+
+    function renderNav() {
+      const nav = $("nav");
+      nav.innerHTML = "";
+      routes.forEach(route => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = route.label;
+        button.className = route.id === state.route ? "active" : "";
+        button.onclick = () => {
+          state.route = route.id;
+          render();
+        };
+        nav.appendChild(button);
+      });
+    }
+
+    function getPrice(symbol) {
+      return Number(state.prices?.prices?.[symbol]?.usd) || 0;
+    }
+
+    function getPriceUpdated(symbol) {
+      return state.prices?.prices?.[symbol]?.updatedAt || state.prices?.ts || null;
+    }
+
+    function normalizeTransaction(tx) {
+      const type = String(tx.type || "buy").toLowerCase();
+      return {
+        id: tx.id || `${nowTs()}_${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: Number(tx.timestamp) || Date.now(),
+        type,
+        assetSymbol: String(tx.assetSymbol || tx.asset_symbol || "").toUpperCase().trim(),
+        qty: Number(tx.qty) || 0,
+        price: Number(tx.price ?? tx.unit_price ?? 0) || 0,
+        feeAmount: Number(tx.feeAmount ?? tx.fee_amount ?? 0) || 0,
+        feeCurrency: String(tx.feeCurrency || tx.fee_currency || "USD").toUpperCase(),
+        venue: String(tx.venue || ""),
+        tags: Array.isArray(tx.tags) ? tx.tags : String(tx.tags || "").split(",").map(v => v.trim()).filter(Boolean),
+        note: String(tx.note || ""),
+        source: String(tx.source || "manual"),
+        externalId: String(tx.externalId || tx.external_id || ""),
+        realizedPnl: Number(tx.realizedPnl || 0) || 0
+      };
+    }
+
+    function normalizeHoldingEntry(item) {
+      return {
+        id: item.id || `${nowTs()}_${Math.random().toString(36).slice(2, 8)}`,
+        symbol: String(item.symbol || "").toUpperCase().trim(),
+        qty: Number(item.qty) || 0,
+        buyPrice: Number(item.buyPrice || item.buy_price || 0) || 0,
+        timestamp: Number(item.timestamp) || Date.now(),
+        note: String(item.note || "")
+      };
+    }
+
+    function colorFromPnl(value) {
+      if (!Number.isFinite(value)) return "rgba(100, 116, 139, 0.25)";
+      if (value > 0) return `rgba(16, 185, 129, ${Math.min(0.85, 0.2 + Math.abs(value) / 5000)})`;
+      if (value < 0) return `rgba(239, 68, 68, ${Math.min(0.85, 0.2 + Math.abs(value) / 5000)})`;
+      return "rgba(100, 116, 139, 0.25)";
+    }
+
+    function computePortfolio(transactions) {
+      const prices = state.prices?.prices || {};
+      const byAsset = new Map();
+      const sorted = [...transactions].sort((a, b) => a.timestamp - b.timestamp);
+      const dailyMap = new Map();
+
+      function ensureDay(dayKey) {
+        if (!dailyMap.has(dayKey)) {
+          dailyMap.set(dayKey, { realizedPnl: 0, trades: 0, entries: [], symbols: new Set() });
+        }
+        return dailyMap.get(dayKey);
+      }
+
+      for (const tx of sorted) {
+        const item = normalizeTransaction(tx);
+        const symbol = item.assetSymbol;
+        if (!symbol || item.qty <= 0) continue;
+        if (!byAsset.has(symbol)) {
+          byAsset.set(symbol, {
+            symbol,
+            qty: 0,
+            costBasis: 0,
+            avgCost: 0,
+            realizedPnl: 0,
+            marketValue: 0,
+            livePrice: Number(prices[symbol]?.usd) || 0,
+            unrealizedPnl: 0,
+            lots: []
+          });
+        }
+
+        const dayKey = new Date(item.timestamp).toISOString().slice(0, 10);
+        const day = ensureDay(dayKey);
+        day.trades += 1;
+        day.entries.push(item);
+        day.symbols.add(symbol);
+
+        const row = byAsset.get(symbol);
+        const feeCost = item.feeCurrency === "USD" ? item.feeAmount : 0;
+
+        switch (item.type) {
+          case "buy":
+          case "transfer_in":
+          case "reward":
+            row.costBasis += item.qty * item.price + feeCost;
+            row.qty += item.qty;
+            row.lots.push({ qty: item.qty, price: item.price, timestamp: item.timestamp });
+            break;
+          case "sell":
+          case "transfer_out": {
+            const sellQty = Math.min(item.qty, row.qty);
+            const avgCost = row.qty > 0 ? row.costBasis / row.qty : 0;
+            const proceeds = sellQty * item.price - feeCost;
+            const basis = sellQty * avgCost;
+            const realized = proceeds - basis;
+            row.realizedPnl += realized;
+            row.costBasis -= basis;
+            row.qty -= sellQty;
+            if (row.qty < 1e-10) {
+              row.qty = 0;
+              row.costBasis = 0;
+              row.lots = [];
+            }
+            item.realizedPnl = realized;
+            day.realizedPnl += realized;
+            break;
+          }
+          default:
+            break;
+        }
+
+        row.avgCost = row.qty > 0 ? row.costBasis / row.qty : 0;
+      }
+
+      const positions = Array.from(byAsset.values()).map(row => {
+        row.livePrice = Number(prices[row.symbol]?.usd) || 0;
+        row.marketValue = row.qty * row.livePrice;
+        row.unrealizedPnl = row.marketValue - row.costBasis;
+        row.allocation = 0;
+        row.priceUpdated = getPriceUpdated(row.symbol);
+        return row;
+      }).sort((a, b) => b.marketValue - a.marketValue);
+
+      const totalMarketValue = positions.reduce((sum, p) => sum + p.marketValue, 0);
+      const totalCost = positions.reduce((sum, p) => sum + p.costBasis, 0);
+      const realizedPnl = positions.reduce((sum, p) => sum + p.realizedPnl, 0);
+      const totalPnl = positions.reduce((sum, p) => sum + p.unrealizedPnl, 0);
+      positions.forEach(p => p.allocation = totalMarketValue > 0 ? (p.marketValue / totalMarketValue) * 100 : 0);
+
+      return {
+        positions,
+        totalMarketValue,
+        totalCost,
+        totalPnl,
+        totalPnlPercent: totalCost > 0 ? (totalPnl / totalCost) * 100 : 0,
+        realizedPnl,
+        assetCount: positions.filter(p => p.qty > 0).length,
+        transactionCount: transactions.length,
+        priceAge: state.status?.ageMs || 0,
+        topPositions: positions.slice(0, 5),
+        dailyMap
+      };
+    }
+
+    function buildMarketRows() {
+      const prices = state.prices?.prices || {};
+      state.marketRows = Object.entries(prices).map(([symbol, info], idx) => {
+        const base = Number(info.usd) || 0;
+        const seed = symbol.split("").reduce((s, ch) => s + ch.charCodeAt(0), idx + 1);
+        const change24h = (((seed * 17) % 1400) - 700) / 100;
+        const change1h = change24h / 4;
+        const change7d = change24h * 1.8;
+        const marketCap = base * (seed * 100000);
+        const volume = base * (seed * 20000);
+        return {
+          symbol,
+          name: symbol,
+          price: base,
+          change1h,
+          change24h,
+          change7d,
+          marketCap,
+          volume,
+          updatedAt: info.updatedAt || state.prices?.ts || null,
+          watchlisted: (state.prefs.watchlist || []).includes(symbol)
+        };
+      }).sort((a, b) => b.marketCap - a.marketCap);
+    }
+
+    function updateDerivedState() {
+      state.portfolio = computePortfolio(state.transactions);
+      buildMarketRows();
+      runAlerts();
+    }
+
+    function runAlerts() {
+      const prices = state.prices?.prices || {};
+      let fired = 0;
+      state.alerts = state.alerts.map(alert => {
+        if (!alert.enabled) return alert;
+        const live = Number(prices[alert.symbol]?.usd);
+        if (!Number.isFinite(live)) return alert;
+        const triggered = alert.direction === "above" ? live >= alert.threshold : live <= alert.threshold;
+        if (triggered && !alert.status) {
+          fired += 1;
+        }
+        return { ...alert, status: triggered, lastPrice: live, lastCheckedAt: Date.now() };
+      });
+      if (fired > 0) {
+        persistAll();
+        notify(`${fired} alert(s) triggered`, "warn");
+      }
+    }
+
+    function kpi(label, value, note, tone = "") {
+      return `<div class="card"><div class="kpi-label">${label}</div><div class="kpi-value ${tone}">${value}</div><div class="muted">${note}</div></div>`;
+    }
+
+    function renderDashboard() {
+      const allocation = state.portfolio.topPositions.length
+        ? state.portfolio.topPositions.map(row => {
+            const pct = Math.max(0, Math.min(100, row.allocation));
+            return `
+              <div class="mini-item">
+                <div>
+                  <div><strong>${escapeHtml(row.symbol)}</strong></div>
+                  <div class="muted">${formatNumber(row.qty, 6)} units, ${formatCurrency(row.marketValue)}</div>
+                </div>
+                <div style="min-width: 140px; width: 42%;">
+                  <div class="muted right" style="margin-bottom: 6px;">${formatNumber(pct, 1)}%</div>
+                  <div class="progress"><span style="width:${pct}%"></span></div>
+                </div>
+              </div>
+            `;
+          }).join("")
+        : `<div class="empty">Add transactions to build allocation.</div>`;
+
+      const heatmap = state.portfolio.positions.length
+        ? state.portfolio.positions.map(row => `
+            <div class="heat-cell" style="background:${colorFromPnl(row.unrealizedPnl)}">
+              <strong>${escapeHtml(row.symbol)}</strong>
+              <div>${formatCurrency(row.marketValue)}</div>
+              <div class="${row.unrealizedPnl >= 0 ? "good" : "bad"}">${formatCurrency(row.unrealizedPnl)}</div>
+              <div class="muted">${formatNumber(row.allocation, 1)}% allocation</div>
+            </div>
+          `).join("")
+        : `<div class="empty">Heatmap appears after positions exist.</div>`;
+
+      const topRows = state.portfolio.topPositions.map(row => `
+        <tr>
+          <td>${escapeHtml(row.symbol)}</td>
+          <td>${formatCurrency(row.livePrice)}</td>
+          <td>${formatCurrency(row.marketValue)}</td>
+          <td class="${row.unrealizedPnl >= 0 ? "good" : "bad"}">${formatCurrency(row.unrealizedPnl)}</td>
+          <td>${formatNumber(row.allocation, 1)}%</td>
+        </tr>
+      `).join("");
+
+      return `
+        <section class="grid kpis">
+          ${kpi("Portfolio value", formatCurrency(state.portfolio.totalMarketValue), "Executive view of current mark-to-market portfolio")}
+          ${kpi("Total P&L", formatCurrency(state.portfolio.totalPnl), `${formatNumber(state.portfolio.totalPnlPercent, 2)}% open-position return`, state.portfolio.totalPnl >= 0 ? "good" : "bad")}
+          ${kpi("Total cost", formatCurrency(state.portfolio.totalCost), "Tracked using the active cost-basis method")}
+          ${kpi("Asset count", String(state.portfolio.assetCount), "Positions currently held")}
+          ${kpi("Transactions", String(state.transactions.length), "Manual + imported ledger rows")}
+          ${kpi("Realized P&L", formatCurrency(state.portfolio.realizedPnl), "Closed-position performance", state.portfolio.realizedPnl >= 0 ? "good" : "bad")}
+          ${kpi("Worker status", state.status?.ok ? "Healthy" : "Not ready", `Provider: ${escapeHtml(state.status?.provider || "n/a")}`, state.status?.ok ? "good" : "warn")}
+          ${kpi("Price age", `${Math.round((state.portfolio.priceAge || 0) / 1000)}s`, "Latest cache age from the Worker")}
+        </section>
+
+        <section class="grid two">
+          <div class="card">
+            <div class="row space section-title"><h3>Allocation</h3><span class="pill">${state.portfolio.assetCount} active assets</span></div>
+            <div class="mini-list">${allocation}</div>
+          </div>
+          <div class="card">
+            <div class="row space section-title"><h3>Top positions</h3><span class="pill">Top ${state.portfolio.topPositions.length}</span></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Asset</th><th>Live price</th><th>Value</th><th>P&L</th><th>Allocation</th></tr></thead>
+                <tbody>${topRows || `<tr><td colspan="5"><div class="empty">No positions yet.</div></td></tr>`}</tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="row space section-title"><h3>Heatmap</h3><span class="pill">Asset contribution</span></div>
+          <div class="heatmap">${heatmap}</div>
+        </section>
+      `;
+    }
+
+    function renderAssets() {
+      const cols = state.filters.assetColumns;
+      const columnChecks = Object.entries(cols).map(([key, enabled]) => `
+        <label><input type="checkbox" data-asset-col="${key}" ${enabled ? "checked" : ""} /> ${escapeHtml(key)}</label>
+      `).join("");
+
+      const rows = state.portfolio.positions.map(row => `
+        <tr>
+          ${cols.symbol ? `<td>${escapeHtml(row.symbol)}</td>` : ""}
+          ${cols.qty ? `<td>${formatNumber(row.qty, 6)}</td>` : ""}
+          ${cols.avgCost ? `<td>${formatCurrency(row.avgCost)}</td>` : ""}
+          ${cols.livePrice ? `<td>${formatCurrency(row.livePrice)}</td>` : ""}
+          ${cols.costBasis ? `<td>${formatCurrency(row.costBasis)}</td>` : ""}
+          ${cols.marketValue ? `<td>${formatCurrency(row.marketValue)}</td>` : ""}
+          ${cols.unrealized ? `<td class="${row.unrealizedPnl >= 0 ? "good" : "bad"}">${formatCurrency(row.unrealizedPnl)}</td>` : ""}
+          ${cols.realized ? `<td class="${row.realizedPnl >= 0 ? "good" : "bad"}">${formatCurrency(row.realizedPnl)}</td>` : ""}
+          ${cols.allocation ? `<td>${formatNumber(row.allocation, 1)}%</td>` : ""}
+          ${cols.priceUpdated ? `<td>${formatDate(row.priceUpdated)}</td>` : ""}
+        </tr>
+      `).join("");
+
+      const heads = [
+        cols.symbol && "<th>Asset</th>",
+        cols.qty && "<th>Qty</th>",
+        cols.avgCost && "<th>Avg cost</th>",
+        cols.livePrice && "<th>Price</th>",
+        cols.costBasis && "<th>Cost</th>",
+        cols.marketValue && "<th>Market value</th>",
+        cols.unrealized && "<th>P&L</th>",
+        cols.realized && "<th>Realized</th>",
+        cols.allocation && "<th>%</th>",
+        cols.priceUpdated && "<th>Updated</th>"
+      ].filter(Boolean).join("");
+
+      return `
+        <section class="grid kpis">
+          ${kpi("Portfolio value", formatCurrency(state.portfolio.totalMarketValue), "Current value")}
+          ${kpi("Total P&L", formatCurrency(state.portfolio.totalPnl), "Open-position gain or loss", state.portfolio.totalPnl >= 0 ? "good" : "bad")}
+          ${kpi("Total cost", formatCurrency(state.portfolio.totalCost), "Open-position basis")}
+          ${kpi("Asset count", String(state.portfolio.assetCount), "Tracked positions")}
+        </section>
+
+        <section class="grid two">
+          <div class="card">
+            <div class="row space section-title"><h3>Assets table</h3><button class="button" type="button" onclick="refreshAll()">Refresh</button></div>
+            <p class="muted">Local-first positions table with explicit live price status and cost-basis metrics.</p>
+            <div class="table-wrap">
+              <table>
+                <thead><tr>${heads}</tr></thead>
+                <tbody>${rows || `<tr><td colspan="10"><div class="empty">No positions yet. Add or import transactions.</div></td></tr>`}</tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Column configurator</h3>
+            <div class="checklist">${columnChecks}</div>
+            <p class="muted" style="margin-top:12px;">Live prices are limited to assets currently returned by your Worker cache. Extended backend-backed market fields can be added later without changing this shell again.</p>
+          </div>
+        </section>
+      `;
+    }
+
+    function getCalendarData() {
+      const month = Number(state.filters.calendarMonth);
+      const year = Number(state.filters.calendarYear);
+      const selected = state.filters.calendarSymbols;
+      const first = new Date(year, month, 1);
+      const last = new Date(year, month + 1, 0);
+
+      const days = [];
+      for (let i = 0; i < first.getDay(); i += 1) {
+        days.push(null);
+      }
+
+      const map = state.portfolio.dailyMap || new Map();
+      for (let day = 1; day <= last.getDate(); day += 1) {
+        const date = new Date(year, month, day);
+        const key = date.toISOString().slice(0, 10);
+        const info = map.get(key) || { realizedPnl: 0, trades: 0, entries: [], symbols: new Set() };
+        const filteredEntries = selected.length
+          ? info.entries.filter(entry => selected.includes(entry.assetSymbol))
+          : info.entries;
+        const realizedPnl = filteredEntries.reduce((sum, item) => sum + (Number(item.realizedPnl) || 0), 0);
+        days.push({
+          date,
+          key,
+          realizedPnl,
+          trades: filteredEntries.length,
+          entries: filteredEntries
+        });
+      }
+      return days;
+    }
+
+    function renderCalendar() {
+      const month = Number(state.filters.calendarMonth);
+      const year = Number(state.filters.calendarYear);
+      const selected = state.filters.calendarSymbols;
+      const activeSymbols = Array.from(new Set(state.transactions.map(tx => tx.assetSymbol))).filter(Boolean).sort();
+      const days = getCalendarData();
+
+      const calendarHtml = CALENDAR_WEEK.map(name => `<div class="calendar-head">${name}</div>`).join("") + days.map(item => {
+        if (!item) return `<div class="calendar-day is-empty"></div>`;
+        return `
+          <button type="button" class="calendar-day" onclick="showDayDetails('${item.key}')">
+            <strong>${item.date.getDate()}</strong>
+            <div class="${item.realizedPnl >= 0 ? "good" : "bad"}">${formatCurrency(item.realizedPnl)}</div>
+            <div class="muted">${item.trades} trade(s)</div>
+          </button>
+        `;
+      }).join("");
+
+      const options = Array.from({ length: 12 }, (_, idx) => `<option value="${idx}" ${idx === month ? "selected" : ""}>${new Date(year, idx, 1).toLocaleString(undefined, { month: "long" })}</option>`).join("");
+      const yearOptions = Array.from({ length: 5 }, (_, offset) => {
+        const y = new Date().getFullYear() - 2 + offset;
+        return `<option value="${y}" ${y === year ? "selected" : ""}>${y}</option>`;
+      }).join("");
+
+      const filters = activeSymbols.map(symbol => `
+        <label><input type="checkbox" data-calendar-symbol="${symbol}" ${selected.includes(symbol) ? "checked" : ""}/> ${escapeHtml(symbol)}</label>
+      `).join("");
+
+      return `
+        <section class="grid two">
+          <div class="card">
+            <div class="row space section-title"><h3>Monthly P&L calendar</h3><span class="pill">${year}</span></div>
+            <div class="row" style="margin-bottom:12px;">
+              <label>Month<select id="calendar-month">${options}</select></label>
+              <label>Year<select id="calendar-year">${yearOptions}</select></label>
+            </div>
+            <div class="calendar">${calendarHtml}</div>
+          </div>
+          <div class="card">
+            <h3>Coin filter</h3>
+            <p class="muted">Choose all coins or focus the month on selected assets only.</p>
+            <div class="checklist">
+              <label><input type="checkbox" id="calendar-all" ${selected.length === 0 ? "checked" : ""}/> All coins</label>
+              ${filters || `<div class="empty">No transaction symbols yet.</div>`}
+            </div>
+            <div class="footer-note">Click any day to open the drilldown with entries, realized P&L, and day-level activity.</div>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderLedger() {
+      const rows = [...state.transactions].sort((a, b) => b.timestamp - a.timestamp).map(item => `
+        <tr>
+          <td>${formatDate(item.timestamp)}</td>
+          <td>${escapeHtml(item.type)}</td>
+          <td>${escapeHtml(item.assetSymbol)}</td>
+          <td>${formatNumber(item.qty, 6)}</td>
+          <td>${formatCurrency(item.price)}</td>
+          <td>${escapeHtml(item.venue || "-")}</td>
+          <td>${escapeHtml(item.tags.join(", ") || "-")}</td>
+          <td>${escapeHtml(item.note || "-")}</td>
+          <td><button class="linkish" type="button" onclick="deleteTransaction('${item.id}')">Delete</button></td>
+        </tr>
+      `).join("");
+
+      return `
+        <section class="grid two">
+          <div class="card">
+            <h3>Manual entry</h3>
+            <form id="ledger-form">
+              <div class="form-grid three">
+                <label>Date
+                  <input type="date" name="date" value="${toInputDate(Date.now())}" />
+                </label>
+                <label>Type
+                  <select name="type">
+                    <option value="buy">Buy</option>
+                    <option value="sell">Sell</option>
+                    <option value="transfer_in">Transfer In</option>
+                    <option value="transfer_out">Transfer Out</option>
+                    <option value="reward">Reward</option>
+                  </select>
+                </label>
+                <label>Asset
+                  <input type="text" name="assetSymbol" list="asset-list" placeholder="BTC" required />
+                </label>
+                <label>Quantity
+                  <input type="number" step="0.000001" min="0" name="qty" required />
+                </label>
+                <label>Unit price
+                  <input id="ledger-price" type="number" step="0.000001" min="0" name="price" required />
+                </label>
+                <label>Venue
+                  <input type="text" name="venue" placeholder="Binance" />
+                </label>
+                <label>Fee amount
+                  <input type="number" step="0.000001" min="0" name="feeAmount" value="0" />
+                </label>
+                <label>Fee currency
+                  <input type="text" name="feeCurrency" value="USD" />
+                </label>
+                <label>Tags
+                  <input type="text" name="tags" placeholder="swing, spot" />
+                </label>
+              </div>
+              <label>Note
+                <textarea name="note" placeholder="Optional note"></textarea>
+              </label>
+              <div class="row">
+                <button class="button" type="button" id="fill-ledger-live-price">Use live price</button>
+                <button class="button primary" type="submit">Save transaction</button>
+              </div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>CSV import shortcut</h3>
+            <p class="muted">The dedicated Import page is mounted separately, but Ledger also keeps an embedded import shortcut because the original product duplicated both surfaces.</p>
+            <div class="row">
+              <button class="button" type="button" onclick="state.route='import'; render();">Open Import page</button>
+            </div>
+            <div class="footer-note">This duplication is deliberate because your source product had both a ledger-embedded import path and a dedicated import wizard.</div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="row space section-title"><h3>Transaction journal</h3><span class="pill">${state.transactions.length} rows</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Timestamp</th><th>Type</th><th>Asset</th><th>Qty</th><th>Unit price</th><th>Venue</th><th>Tags</th><th>Note</th><th>Action</th></tr>
+              </thead>
+              <tbody>${rows || `<tr><td colspan="9"><div class="empty">No transactions saved yet.</div></td></tr>`}</tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderMarkets() {
+      const mode = state.filters.marketMode;
+      const range = state.filters.marketRange;
+      const count = state.filters.marketCount;
+      const rows = state.marketRows.slice(0, Math.min(count, state.marketRows.length));
+      const bubbleHtml = rows.map((row, idx) => {
+        const metric = range === "1h" ? row.change1h : range === "7d" ? row.change7d : row.change24h;
+        const size = 90 + Math.min(90, Math.abs(metric) * 10) + idx * 0;
+        const bg = metric >= 0 ? "linear-gradient(135deg, #059669, #10b981)" : "linear-gradient(135deg, #b91c1c, #ef4444)";
+        return `
+          <div class="bubble" style="width:${size}px;height:${size}px;background:${bg}">
+            <div>
+              ${escapeHtml(row.symbol)}
+              <small>${formatCurrency(row.price)}</small>
+              <small>${metric >= 0 ? "+" : ""}${formatNumber(metric, 2)}%</small>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      const tableRows = rows.map(row => `
+        <tr>
+          <td><button class="linkish" type="button" onclick="toggleWatchlist('${row.symbol}')">${row.watchlisted ? "★" : "☆"}</button> ${escapeHtml(row.name)}</td>
+          <td class="${row.change1h >= 0 ? "good" : "bad"}">${formatNumber(row.change1h, 2)}%</td>
+          <td class="${row.change24h >= 0 ? "good" : "bad"}">${formatNumber(row.change24h, 2)}%</td>
+          <td class="${row.change7d >= 0 ? "good" : "bad"}">${formatNumber(row.change7d, 2)}%</td>
+          <td>${formatCurrency(row.price)}</td>
+          <td>${formatCurrency(row.marketCap, 0)}</td>
+          <td>${formatCurrency(row.volume, 0)}</td>
+        </tr>
+      `).join("");
+
+      return `
+        <section class="card">
+          <div class="market-toolbar">
+            <div class="toggle-group">
+              <button type="button" class="${mode === "bubbles" ? "active" : ""}" data-market-mode="bubbles">Bubbles</button>
+              <button type="button" class="${mode === "table" ? "active" : ""}" data-market-mode="table">Table</button>
+            </div>
+            <div class="toggle-group">
+              <button type="button" class="${range === "1h" ? "active" : ""}" data-market-range="1h">1h</button>
+              <button type="button" class="${range === "24h" ? "active" : ""}" data-market-range="24h">24h</button>
+              <button type="button" class="${range === "7d" ? "active" : ""}" data-market-range="7d">7d</button>
+            </div>
+            <div class="toggle-group">
+              <button type="button" class="${count === 100 ? "active" : ""}" data-market-count="100">Top 100</button>
+              <button type="button" class="${count === 250 ? "active" : ""}" data-market-count="250">Top 250</button>
+              <button type="button" class="${count === 500 ? "active" : ""}" data-market-count="500">Top 500</button>
+            </div>
+            <span class="pill">Worker currently returns ${state.marketRows.length} assets</span>
+          </div>
+          <p class="muted" style="margin-top:12px;">The market shell includes the original UX surface. Extended market breadth still depends on your backend data provider, so right now the view is honest about the cache size instead of faking coverage.</p>
+        </section>
+
+        ${mode === "bubbles"
+          ? `<section class="card"><div class="bubble-grid">${bubbleHtml || `<div class="empty">No market rows available.</div>`}</div></section>`
+          : `<section class="card"><div class="table-wrap"><table><thead><tr><th>Name</th><th>1h</th><th>24h</th><th>7d</th><th>Price</th><th>Market cap</th><th>24h volume</th></tr></thead><tbody>${tableRows || `<tr><td colspan="7"><div class="empty">No market rows available.</div></td></tr>`}</tbody></table></div></section>`
+        }
+      `;
+    }
+
+    function renderVault() {
+      const rows = [...state.snapshots].sort((a, b) => b.timestamp - a.timestamp).map(item => `
+        <tr>
+          <td>${formatDate(item.timestamp)}</td>
+          <td>${escapeHtml(item.description || "-")}</td>
+          <td>${item.stats?.transactions || 0}</td>
+          <td>${item.stats?.holdings || 0}</td>
+          <td>${item.stats?.imports || 0}</td>
+          <td>
+            <button class="linkish" type="button" onclick="restoreSnapshot('${item.id}')">Restore</button>
+            <button class="linkish" type="button" onclick="exportSnapshot('${item.id}')">Export</button>
+            <button class="linkish" type="button" onclick="deleteSnapshot('${item.id}')">Delete</button>
+          </td>
+        </tr>
+      `).join("");
+
+      const stats = {
+        transactions: state.transactions.length,
+        lots: state.portfolio.positions.reduce((sum, p) => sum + p.lots.length, 0),
+        holdings: state.portfolio.assetCount,
+        imports: state.imports.length,
+        manualHoldings: state.manualHoldings.length
+      };
+
+      return `
+        <section class="grid kpis">
+          ${kpi("Transactions", String(stats.transactions), "Current ledger rows")}
+          ${kpi("Lots", String(stats.lots), "Tracked lots in derived positions")}
+          ${kpi("Holdings", String(stats.holdings), "Open assets")}
+          ${kpi("Imports", String(stats.imports), "Imported files metadata")}
+        </section>
+
+        <section class="grid two">
+          <div class="card">
+            <h3>Create snapshot</h3>
+            <form id="snapshot-form">
+              <label>Description
+                <input type="text" name="description" placeholder="Before March import" />
+              </label>
+              <div class="row">
+                <button class="button primary" type="submit">Create snapshot</button>
+                <button class="button" type="button" id="export-all-json">Export all JSON</button>
+              </div>
+            </form>
+            <div class="footer-note">Snapshots are stored in browser storage. JSON export and import let you move the dataset across devices manually.</div>
+          </div>
+          <div class="card">
+            <h3>Import / destructive actions</h3>
+            <form id="vault-import-form">
+              <label>Import JSON backup
+                <input type="file" name="backup" accept=".json,application/json" />
+              </label>
+              <div class="row">
+                <button class="button" type="submit">Import JSON</button>
+                <button class="button danger" type="button" id="clear-all-data">Clear all data</button>
+              </div>
+            </form>
+            <div class="inline-help">Clear all data removes transactions, alerts, imports, snapshots, settings, and DCA entries from local storage.</div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="row space section-title"><h3>Local snapshots</h3><span class="pill">${state.snapshots.length} snapshots</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Timestamp</th><th>Description</th><th>Transactions</th><th>Holdings</th><th>Imports</th><th>Actions</th></tr></thead>
+              <tbody>${rows || `<tr><td colspan="6"><div class="empty">No snapshots yet.</div></td></tr>`}</tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderSettings() {
+      return `
+        <section class="grid two">
+          <div class="card">
+            <h3>Product settings</h3>
+            <form id="prefs-form">
+              <div class="form-grid">
+                <label>Layout
+                  <select name="layout">
+                    <option value="comfortable" ${state.prefs.layout === "comfortable" ? "selected" : ""}>Comfortable</option>
+                    <option value="compact" ${state.prefs.layout === "compact" ? "selected" : ""}>Compact</option>
+                  </select>
+                </label>
+                <label>Theme
+                  <select name="theme">
+                    <option value="dark" ${state.prefs.theme === "dark" ? "selected" : ""}>Dark</option>
+                    <option value="midnight" ${state.prefs.theme === "midnight" ? "selected" : ""}>Midnight</option>
+                    <option value="slate" ${state.prefs.theme === "slate" ? "selected" : ""}>Slate</option>
+                  </select>
+                </label>
+                <label>Tracking method
+                  <select name="trackingMethod">
+                    <option value="FIFO" ${state.prefs.trackingMethod === "FIFO" ? "selected" : ""}>FIFO</option>
+                    <option value="DCA" ${state.prefs.trackingMethod === "DCA" ? "selected" : ""}>DCA</option>
+                  </select>
+                </label>
+                <label>Base currency
+                  <select name="baseCurrency">
+                    <option value="USD" ${state.prefs.baseCurrency === "USD" ? "selected" : ""}>USD</option>
+                  </select>
+                </label>
+              </div>
+              <label>Watchlist, comma-separated
+                <input type="text" name="watchlist" value="${escapeHtml((state.prefs.watchlist || []).join(", "))}" />
+              </label>
+              <div class="row"><button class="button primary" type="submit">Save settings</button></div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>Method guide</h3>
+            <div class="mini-list">
+              <div class="mini-item"><div><strong>FIFO</strong><div class="muted">First-in-first-out lot matching for realized gains.</div></div></div>
+              <div class="mini-item"><div><strong>DCA</strong><div class="muted">Dollar-cost-average position tracking for a simpler running average view.</div></div></div>
+            </div>
+            <p class="muted" style="margin-top:12px;">The current static shell uses running-average cost for live client-side calculations because it is the safest cost basis to keep consistent in one file. If you want true FIFO ledger realization next, move that logic into the Worker and freeze the API shape.</p>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderImportPage() {
+      const rows = [...state.imports].sort((a, b) => b.timestamp - a.timestamp).map(item => `
+        <tr>
+          <td>${formatDate(item.timestamp)}</td>
+          <td>${escapeHtml(item.exchange)}</td>
+          <td>${escapeHtml(item.fileName)}</td>
+          <td>${item.parsedCount}</td>
+          <td>${item.skippedCount}</td>
+          <td>${item.warningCount}</td>
+          <td>${escapeHtml(item.dateRange || "-")}</td>
+        </tr>
+      `).join("");
+
+      return `
+        <section class="grid two">
+          <div class="card">
+            <h3>Import wizard</h3>
+            <p class="muted">Spot history only. Explicitly not for futures, margin, options, earn, P2P, copy trading, deposits, or withdrawals.</p>
+            <form id="import-form">
+              <div class="form-grid">
+                <label>Exchange
+                  <select name="exchange">
+                    <option value="Binance">Binance</option>
+                    <option value="Bybit">Bybit</option>
+                    <option value="OKX">OKX</option>
+                    <option value="Gate.io">Gate.io</option>
+                  </select>
+                </label>
+                <label>Trade CSV
+                  <input type="file" name="csv" accept=".csv,text/csv" required />
+                </label>
+              </div>
+              <div class="upload-drop">Drag-and-drop is not faked here. Use the file picker, the parser, and the preview below.</div>
+              <div class="row"><button class="button primary" type="submit">Parse CSV</button></div>
+            </form>
+            <div id="import-preview" class="stack" style="margin-top:12px;"></div>
+          </div>
+          <div class="card">
+            <h3>Scope truth</h3>
+            <div class="mini-list">
+              <div class="mini-item"><div><strong>Supported</strong><div class="muted">Spot trade history for Binance, Bybit, OKX, Gate.io</div></div></div>
+              <div class="mini-item"><div><strong>Rejected</strong><div class="muted">Futures, margin, options, earn, P2P, copy trading, deposits, withdrawals</div></div></div>
+              <div class="mini-item"><div><strong>Duplicate guard</strong><div class="muted">File hash checked in-browser before import commit</div></div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="row space section-title"><h3>Import history</h3><span class="pill">${state.imports.length} files</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Imported</th><th>Exchange</th><th>File</th><th>Parsed</th><th>Skipped</th><th>Warnings</th><th>Date range</th></tr></thead>
+              <tbody>${rows || `<tr><td colspan="7"><div class="empty">No import metadata saved yet.</div></td></tr>`}</tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderAlerts() {
+      const rows = state.alerts.map(item => `
+        <tr>
+          <td>${escapeHtml(item.symbol)}</td>
+          <td>${escapeHtml(item.direction)}</td>
+          <td>${formatCurrency(item.threshold)}</td>
+          <td>${item.enabled ? "Enabled" : "Disabled"}</td>
+          <td class="${item.status ? "warn" : "muted"}">${item.status ? "Triggered" : "Idle"}</td>
+          <td>${Number.isFinite(item.lastPrice) ? formatCurrency(item.lastPrice) : "-"}</td>
+          <td>
+            <button class="linkish" type="button" onclick="toggleAlert('${item.id}')">${item.enabled ? "Disable" : "Enable"}</button>
+            <button class="linkish" type="button" onclick="deleteAlert('${item.id}')">Delete</button>
+          </td>
+        </tr>
+      `).join("");
+
+      return `
+        <section class="grid two">
+          <div class="card">
+            <h3>Add alert</h3>
+            <form id="alert-form">
+              <div class="form-grid">
+                <label>Symbol
+                  <input type="text" name="symbol" list="asset-list" placeholder="BTC" required />
+                </label>
+                <label>Direction
+                  <select name="direction">
+                    <option value="above">Above</option>
+                    <option value="below">Below</option>
+                  </select>
+                </label>
+                <label>Threshold
+                  <input type="number" min="0" step="0.000001" name="threshold" required />
+                </label>
+              </div>
+              <div class="row"><button class="button primary" type="submit">Save alert</button></div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>Engine notes</h3>
+            <p class="muted">This is intentionally local. Alerts evaluate against the currently cached Worker prices whenever the app refreshes.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="row space section-title"><h3>Alerts</h3><span class="pill">${state.alerts.length} rows</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Symbol</th><th>Type</th><th>Threshold</th><th>Status</th><th>Trigger</th><th>Last price</th><th>Actions</th></tr></thead>
+              <tbody>${rows || `<tr><td colspan="7"><div class="empty">No alerts yet.</div></td></tr>`}</tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderDca() {
+      const summaryMap = new Map();
+      state.manualHoldings.forEach(item => {
+        const row = normalizeHoldingEntry(item);
+        if (!row.symbol || row.qty <= 0) return;
+        if (!summaryMap.has(row.symbol)) {
+          summaryMap.set(row.symbol, { symbol: row.symbol, qty: 0, totalCost: 0, entries: [] });
+        }
+        const sum = summaryMap.get(row.symbol);
+        sum.qty += row.qty;
+        sum.totalCost += row.qty * row.buyPrice;
+        sum.entries.push(row);
+      });
+
+      const summaryRows = Array.from(summaryMap.values()).map(row => {
+        const live = getPrice(row.symbol);
+        const avg = row.qty > 0 ? row.totalCost / row.qty : 0;
+        const value = row.qty * live;
+        const pnl = value - row.totalCost;
+        return `
+          <tr>
+            <td>${escapeHtml(row.symbol)}</td>
+            <td>${formatNumber(row.qty, 6)}</td>
+            <td>${formatCurrency(avg)}</td>
+            <td>${formatCurrency(live)}</td>
+            <td>${formatCurrency(row.totalCost)}</td>
+            <td>${formatCurrency(value)}</td>
+            <td class="${pnl >= 0 ? "good" : "bad"}">${formatCurrency(pnl)}</td>
+          </tr>
+        `;
+      }).join("");
+
+      const entryRows = [...state.manualHoldings].sort((a, b) => b.timestamp - a.timestamp).map(item => {
+        const row = normalizeHoldingEntry(item);
+        return `
+          <tr>
+            <td>${formatDate(row.timestamp)}</td>
+            <td>${escapeHtml(row.symbol)}</td>
+            <td>${formatNumber(row.qty, 6)}</td>
+            <td>${formatCurrency(row.buyPrice)}</td>
+            <td>${escapeHtml(row.note || "-")}</td>
+            <td><button class="linkish" type="button" onclick="deleteManualHolding('${row.id}')">Delete</button></td>
+          </tr>
+        `;
+      }).join("");
+
+      return `
+        <section class="grid two">
+          <div class="card">
+            <h3>Add manual holding</h3>
+            <form id="manual-holding-form">
+              <div class="form-grid">
+                <label>Date
+                  <input type="date" name="date" value="${toInputDate(Date.now())}" />
+                </label>
+                <label>Symbol
+                  <input type="text" name="symbol" list="asset-list" placeholder="BTC" required />
+                </label>
+                <label>Quantity
+                  <input type="number" min="0" step="0.000001" name="qty" required />
+                </label>
+                <label>Buy price
+                  <input type="number" min="0" step="0.000001" name="buyPrice" required />
+                </label>
+              </div>
+              <label>Note
+                <input type="text" name="note" placeholder="Optional note" />
+              </label>
+              <div class="row"><button class="button primary" type="submit">Add holding</button></div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>DCA summary</h3>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Asset</th><th>Total qty</th><th>Avg buy</th><th>Current price</th><th>Total cost</th><th>Value</th><th>P&L</th></tr></thead>
+                <tbody>${summaryRows || `<tr><td colspan="7"><div class="empty">No manual holdings yet.</div></td></tr>`}</tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="row space section-title"><h3>Entries</h3><span class="pill">${state.manualHoldings.length} rows</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Asset</th><th>Qty</th><th>Buy price</th><th>Note</th><th>Action</th></tr></thead>
+              <tbody>${entryRows || `<tr><td colspan="6"><div class="empty">No manual holdings entries yet.</div></td></tr>`}</tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
+    function render() {
+      renderNav();
+      updateHeader();
+
+      const view = $("view");
+      if (state.error) {
+        view.innerHTML = `<div class="card"><div class="bad"><strong>Error:</strong> ${escapeHtml(state.error)}</div><p class="muted">Backend price sync failed, but your local data is still intact.</p></div>`;
+        return;
+      }
+
+      if (state.loading && !state.status) {
+        view.innerHTML = `<div class="card"><div class="empty">Loading...</div></div>`;
+        return;
+      }
+
+      switch (state.route) {
+        case "dashboard":
+          view.innerHTML = renderDashboard();
+          break;
+        case "assets":
+          view.innerHTML = renderAssets();
+          break;
+        case "calendar":
+          view.innerHTML = renderCalendar();
+          break;
+        case "ledger":
+          view.innerHTML = renderLedger();
+          break;
+        case "markets":
+          view.innerHTML = renderMarkets();
+          break;
+        case "vault":
+          view.innerHTML = renderVault();
+          break;
+        case "settings":
+          view.innerHTML = renderSettings();
+          break;
+        case "import":
+          view.innerHTML = renderImportPage();
+          break;
+        case "alerts":
+          view.innerHTML = renderAlerts();
+          break;
+        case "dca":
+          view.innerHTML = renderDca();
+          break;
+        default:
+          view.innerHTML = renderDashboard();
+      }
+
+      bindDynamicElements();
+    }
+
+    function bindDynamicElements() {
+      const columnChecks = document.querySelectorAll("[data-asset-col]");
+      columnChecks.forEach(input => {
+        input.onchange = () => {
+          const key = input.getAttribute("data-asset-col");
+          state.filters.assetColumns[key] = input.checked;
+          render();
+        };
+      });
+
+      const month = $("calendar-month");
+      const year = $("calendar-year");
+      if (month) month.onchange = () => { state.filters.calendarMonth = Number(month.value); render(); };
+      if (year) year.onchange = () => { state.filters.calendarYear = Number(year.value); render(); };
+
+      const all = $("calendar-all");
+      if (all) {
+        all.onchange = () => {
+          if (all.checked) state.filters.calendarSymbols = [];
+          render();
+        };
+      }
+      document.querySelectorAll("[data-calendar-symbol]").forEach(input => {
+        input.onchange = () => {
+          const symbol = input.getAttribute("data-calendar-symbol");
+          const set = new Set(state.filters.calendarSymbols);
+          if (input.checked) set.add(symbol); else set.delete(symbol);
+          state.filters.calendarSymbols = Array.from(set);
+          if (state.filters.calendarSymbols.length > 0 && $("calendar-all")) $("calendar-all").checked = false;
+          render();
+        };
+      });
+
+      document.querySelectorAll("[data-market-mode]").forEach(btn => {
+        btn.onclick = () => { state.filters.marketMode = btn.getAttribute("data-market-mode"); render(); };
+      });
+      document.querySelectorAll("[data-market-range]").forEach(btn => {
+        btn.onclick = () => { state.filters.marketRange = btn.getAttribute("data-market-range"); render(); };
+      });
+      document.querySelectorAll("[data-market-count]").forEach(btn => {
+        btn.onclick = () => { state.filters.marketCount = Number(btn.getAttribute("data-market-count")); render(); };
+      });
+
+      bindLedgerForm();
+      bindSettingsForm();
+      bindSnapshotForm();
+      bindImportForm();
+      bindAlertForm();
+      bindManualHoldingForm();
+    }
+
+    function bindLedgerForm() {
+      const form = $("ledger-form");
+      if (!form) return;
+      form.onsubmit = async event => {
+        event.preventDefault();
+        const fd = new FormData(form);
+        const tx = normalizeTransaction({
+          timestamp: new Date(String(fd.get("date") || toInputDate(Date.now()))).getTime(),
+          type: fd.get("type"),
+          assetSymbol: fd.get("assetSymbol"),
+          qty: fd.get("qty"),
+          price: fd.get("price"),
+          feeAmount: fd.get("feeAmount"),
+          feeCurrency: fd.get("feeCurrency"),
+          venue: fd.get("venue"),
+          tags: String(fd.get("tags") || ""),
+          note: fd.get("note"),
+          source: "manual"
+        });
+        if (!tx.assetSymbol || tx.qty <= 0) {
+          notify("Asset and quantity are required", "bad");
+          return;
+        }
+        state.transactions.push(tx);
+        persistAll();
+        updateDerivedState();
+        render();
+        await syncTransactionToWorker(tx);
+        notify("Transaction saved");
+        form.reset();
+      };
+
+      const priceButton = $("fill-ledger-live-price");
+      if (priceButton) {
+        priceButton.onclick = () => {
+          const symbol = String(form.querySelector('[name="assetSymbol"]').value || "").toUpperCase();
+          const live = getPrice(symbol);
+          if (!Number.isFinite(live) || live <= 0) {
+            notify("No live price found for that asset", "bad");
+            return;
+          }
+          $("ledger-price").value = String(live);
+        };
+      }
+    }
+
+    function bindSettingsForm() {
+      const form = $("prefs-form");
+      if (!form) return;
+      form.onsubmit = async event => {
+        event.preventDefault();
+        const fd = new FormData(form);
+        state.prefs.layout = String(fd.get("layout") || "comfortable");
+        state.prefs.theme = String(fd.get("theme") || "dark");
+        state.prefs.trackingMethod = String(fd.get("trackingMethod") || "FIFO");
+        state.prefs.baseCurrency = String(fd.get("baseCurrency") || "USD");
+        state.prefs.watchlist = String(fd.get("watchlist") || "")
+          .split(",")
+          .map(v => v.trim().toUpperCase())
+          .filter(Boolean);
+        persistAll();
+        try {
+          await api("/api/tracking-preferences", { method: "PUT", body: JSON.stringify({ baseCurrency: state.prefs.baseCurrency, watchlist: state.prefs.watchlist, trackingMethod: state.prefs.trackingMethod }) });
+        } catch (_) {}
+        render();
+        notify("Settings saved");
+      };
+    }
+
+    function bindSnapshotForm() {
+      const form = $("snapshot-form");
+      if (form) {
+        form.onsubmit = event => {
+          event.preventDefault();
+          const fd = new FormData(form);
+          const payload = {
+            id: `${nowTs()}_${Math.random().toString(36).slice(2, 8)}`,
+            timestamp: nowTs(),
+            description: String(fd.get("description") || ""),
+            stats: {
+              transactions: state.transactions.length,
+              holdings: state.portfolio.assetCount,
+              imports: state.imports.length
+            },
+            data: {
+              transactions: state.transactions,
+              alerts: state.alerts,
+              prefs: state.prefs,
+              imports: state.imports,
+              manualHoldings: state.manualHoldings
+            }
+          };
+          state.snapshots.push(payload);
+          persistAll();
+          render();
+          form.reset();
+          notify("Snapshot created");
+        };
+      }
+
+      const exportAll = $("export-all-json");
+      if (exportAll) {
+        exportAll.onclick = () => {
+          downloadJson(`cointracker-backup-${Date.now()}.json`, {
+            exportedAt: Date.now(),
+            transactions: state.transactions,
+            alerts: state.alerts,
+            prefs: state.prefs,
+            snapshots: state.snapshots,
+            imports: state.imports,
+            manualHoldings: state.manualHoldings
+          });
+        };
+      }
+
+      const importForm = $("vault-import-form");
+      if (importForm) {
+        importForm.onsubmit = async event => {
+          event.preventDefault();
+          const file = importForm.querySelector('input[type="file"]').files[0];
+          if (!file) return;
+          try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            state.transactions = Array.isArray(data.transactions) ? data.transactions.map(normalizeTransaction) : state.transactions;
+            state.alerts = Array.isArray(data.alerts) ? data.alerts : state.alerts;
+            state.prefs = data.prefs ? { ...state.prefs, ...data.prefs } : state.prefs;
+            state.snapshots = Array.isArray(data.snapshots) ? data.snapshots : state.snapshots;
+            state.imports = Array.isArray(data.imports) ? data.imports : state.imports;
+            state.manualHoldings = Array.isArray(data.manualHoldings) ? data.manualHoldings.map(normalizeHoldingEntry) : state.manualHoldings;
+            persistAll();
+            updateDerivedState();
+            render();
+            notify("JSON backup imported");
+          } catch (error) {
+            notify(`Import failed, ${error.message}`, "bad");
+          }
+        };
+      }
+
+      const clearBtn = $("clear-all-data");
+      if (clearBtn) {
+        clearBtn.onclick = () => {
+          if (!confirm("Clear all local data?")) return;
+          Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+          loadLocalState();
+          updateDerivedState();
+          render();
+          notify("Local data cleared", "warn");
+        };
+      }
+    }
+
+    function bindImportForm() {
+      const form = $("import-form");
+      if (!form) return;
+      form.onsubmit = async event => {
+        event.preventDefault();
+        const fd = new FormData(form);
+        const exchange = String(fd.get("exchange") || "Binance");
+        const file = form.querySelector('input[type="file"]').files[0];
+        if (!file) return;
+        const text = await file.text();
+        const hash = await hashText(text);
+
+        if (state.imports.some(item => item.hash === hash)) {
+          notify("Duplicate file detected by hash", "bad");
+          return;
+        }
+
+        const parsed = parseCsvTrades(text, exchange);
+        const preview = $("import-preview");
+        preview.innerHTML = `
+          <div class="card">
+            <h4>Preview</h4>
+            <div class="grid auto">
+              ${kpi("Parsed rows", String(parsed.rows.length), "Spot trades recognized")}
+              ${kpi("Skipped rows", String(parsed.skipped), "Rows ignored due to invalid fields")}
+              ${kpi("Warnings", String(parsed.warnings.length), "Rows with partial issues")}
+              ${kpi("Date range", escapeHtml(parsed.dateRange || "-"), "First to last parsed timestamp")}
+            </div>
+            <div class="row" style="margin-top:12px;">
+              <button class="button primary" type="button" id="commit-import">Save import</button>
+            </div>
+          </div>
+        `;
+        $("commit-import").onclick = async () => {
+          state.transactions.push(...parsed.rows);
+          state.imports.push({
+            id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            timestamp: Date.now(),
+            exchange,
+            fileName: file.name,
+            hash,
+            parsedCount: parsed.rows.length,
+            skippedCount: parsed.skipped,
+            warningCount: parsed.warnings.length,
+            dateRange: parsed.dateRange
+          });
+          persistAll();
+          updateDerivedState();
+          render();
+          notify(`Imported ${parsed.rows.length} rows`);
+          for (const tx of parsed.rows.slice(0, 10)) {
+            await syncTransactionToWorker(tx);
+          }
+        };
+      };
+    }
+
+    function bindAlertForm() {
+      const form = $("alert-form");
+      if (!form) return;
+      form.onsubmit = event => {
+        event.preventDefault();
+        const fd = new FormData(form);
+        const alert = {
+          id: `${nowTs()}_${Math.random().toString(36).slice(2, 8)}`,
+          symbol: String(fd.get("symbol") || "").toUpperCase().trim(),
+          direction: String(fd.get("direction") || "above"),
+          threshold: Number(fd.get("threshold")) || 0,
+          enabled: true,
+          status: false,
+          lastPrice: null
+        };
+        if (!alert.symbol || alert.threshold <= 0) {
+          notify("Alert symbol and threshold are required", "bad");
+          return;
+        }
+        state.alerts.push(alert);
+        persistAll();
+        runAlerts();
+        render();
+        notify("Alert added");
+        form.reset();
+      };
+    }
+
+    function bindManualHoldingForm() {
+      const form = $("manual-holding-form");
+      if (!form) return;
+      form.onsubmit = event => {
+        event.preventDefault();
+        const fd = new FormData(form);
+        const item = normalizeHoldingEntry({
+          symbol: fd.get("symbol"),
+          qty: fd.get("qty"),
+          buyPrice: fd.get("buyPrice"),
+          timestamp: new Date(String(fd.get("date") || toInputDate(Date.now()))).getTime(),
+          note: fd.get("note")
+        });
+        if (!item.symbol || item.qty <= 0) {
+          notify("Symbol and quantity are required", "bad");
+          return;
+        }
+        state.manualHoldings.push(item);
+        persistAll();
+        render();
+        notify("Manual holding added");
+        form.reset();
+      };
+    }
+
+    async function syncTransactionToWorker(tx) {
+      try {
+        await api("/api/transactions", {
+          method: "POST",
+          body: JSON.stringify({
+            type: tx.type,
+            assetSymbol: tx.assetSymbol,
+            qty: tx.qty,
+            price: tx.price,
+            note: tx.note
+          })
+        });
+      } catch (_) {
+        // Keep local-first behavior intact.
+      }
+    }
+
+    async function refreshAll() {
+      state.loading = true;
+      state.error = "";
+      render();
+      try {
+        const [status, prices] = await Promise.all([
+          api("/api/status"),
+          api("/api/prices")
+        ]);
+        state.status = status;
+        state.prices = prices;
+
+        try {
+          const prefs = await api("/api/tracking-preferences");
+          if (prefs && typeof prefs === "object") {
+            state.prefs = { ...state.prefs, ...prefs };
+          }
+        } catch (_) {}
+
+        try {
+          if (state.transactions.length === 0) {
+            const txRes = await api("/api/transactions");
+            if (Array.isArray(txRes.items)) {
+              state.transactions = txRes.items.map(normalizeTransaction);
+            }
+          }
+        } catch (_) {}
+
+        updateDerivedState();
+        persistAll();
+      } catch (error) {
+        state.error = error.message;
+      } finally {
+        state.loading = false;
+        render();
+      }
+    }
+
+    function deleteTransaction(id) {
+      state.transactions = state.transactions.filter(item => item.id !== id);
+      persistAll();
+      updateDerivedState();
+      render();
+      notify("Transaction deleted", "warn");
+    }
+
+    function toggleWatchlist(symbol) {
+      const set = new Set(state.prefs.watchlist || []);
+      if (set.has(symbol)) set.delete(symbol); else set.add(symbol);
+      state.prefs.watchlist = Array.from(set);
+      persistAll();
+      buildMarketRows();
+      render();
+    }
+
+    function toggleAlert(id) {
+      state.alerts = state.alerts.map(item => item.id === id ? { ...item, enabled: !item.enabled, status: false } : item);
+      persistAll();
+      render();
+    }
+
+    function deleteAlert(id) {
+      state.alerts = state.alerts.filter(item => item.id !== id);
+      persistAll();
+      render();
+      notify("Alert deleted", "warn");
+    }
+
+    function deleteManualHolding(id) {
+      state.manualHoldings = state.manualHoldings.filter(item => item.id !== id);
+      persistAll();
+      render();
+      notify("Manual holding deleted", "warn");
+    }
+
+    function restoreSnapshot(id) {
+      const snap = state.snapshots.find(item => item.id === id);
+      if (!snap) return;
+      state.transactions = snap.data.transactions || [];
+      state.alerts = snap.data.alerts || [];
+      state.prefs = { ...state.prefs, ...(snap.data.prefs || {}) };
+      state.imports = snap.data.imports || [];
+      state.manualHoldings = snap.data.manualHoldings || [];
+      persistAll();
+      updateDerivedState();
+      render();
+      notify("Snapshot restored");
+    }
+
+    function exportSnapshot(id) {
+      const snap = state.snapshots.find(item => item.id === id);
+      if (!snap) return;
+      downloadJson(`cointracker-snapshot-${id}.json`, snap);
+    }
+
+    function deleteSnapshot(id) {
+      state.snapshots = state.snapshots.filter(item => item.id !== id);
+      persistAll();
+      render();
+      notify("Snapshot deleted", "warn");
+    }
+
+    function showDayDetails(key) {
+      const map = state.portfolio.dailyMap || new Map();
+      const info = map.get(key) || { realizedPnl: 0, entries: [] };
+      const entries = info.entries.length ? info.entries.map(item => `
+        <tr>
+          <td>${formatDate(item.timestamp)}</td>
+          <td>${escapeHtml(item.type)}</td>
+          <td>${escapeHtml(item.assetSymbol)}</td>
+          <td>${formatNumber(item.qty, 6)}</td>
+          <td>${formatCurrency(item.price)}</td>
+          <td class="${item.realizedPnl >= 0 ? "good" : "bad"}">${formatCurrency(item.realizedPnl || 0)}</td>
+        </tr>
+      `).join("") : `<tr><td colspan="6"><div class="empty">No entries for this day.</div></td></tr>`;
+
+      openModal(`Day drilldown, ${key}`, `
+        <div class="grid three">
+          ${kpi("Entries", String(info.entries.length), "Transactions on this day")}
+          ${kpi("Daily P&L", formatCurrency(info.realizedPnl || 0), "Realized P&L only", (info.realizedPnl || 0) >= 0 ? "good" : "bad")}
+          ${kpi("Portfolio value", formatCurrency(state.portfolio.totalMarketValue), "Current portfolio value, not a historic snapshot")}
+        </div>
+        <div class="table-wrap" style="margin-top:14px;">
+          <table>
+            <thead><tr><th>Timestamp</th><th>Type</th><th>Asset</th><th>Qty</th><th>Price</th><th>Realized P&L</th></tr></thead>
+            <tbody>${entries}</tbody>
+          </table>
+        </div>
+      `);
+    }
+
+    function downloadJson(fileName, data) {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function hashText(text) {
+      const bytes = new TextEncoder().encode(text);
+      const hash = await crypto.subtle.digest("SHA-256", bytes);
+      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function parseCsvTrades(text, exchange) {
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      if (lines.length < 2) {
+        return { rows: [], skipped: 0, warnings: ["Empty CSV"], dateRange: "" };
+      }
+
+      const headers = lines[0].split(",").map(v => v.trim().toLowerCase());
+      const rows = [];
+      const warnings = [];
+      let skipped = 0;
+      const timestamps = [];
+
+      const idx = name => headers.indexOf(name);
+      const firstExisting = (...names) => names.map(idx).find(i => i >= 0) ?? -1;
+
+      const timeIndex = firstExisting("timestamp", "time", "date", "filled time(utc+0)", "trade time");
+      const symbolIndex = firstExisting("asset_symbol", "symbol", "pair", "market");
+      const sideIndex = firstExisting("type", "side");
+      const qtyIndex = firstExisting("qty", "quantity", "amount", "filled");
+      const priceIndex = firstExisting("price", "average price", "filled price", "execution price");
+
+      for (let i = 1; i < lines.length; i += 1) {
+        const cols = lines[i].split(",").map(v => v.trim());
+        if (!cols.some(Boolean)) continue;
+        const symbol = String(cols[symbolIndex] || "").replace(/[^A-Za-z]/g, "").toUpperCase();
+        const qty = Number(cols[qtyIndex]);
+        const price = Number(cols[priceIndex]);
+        const side = String(cols[sideIndex] || "buy").toLowerCase();
+        let timestamp = Date.parse(cols[timeIndex]);
+        if (!Number.isFinite(timestamp)) timestamp = Date.now();
+
+        if (!symbol || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(price) || price < 0) {
+          skipped += 1;
+          continue;
+        }
+
+        const type = side.includes("sell") ? "sell" : "buy";
+        const row = normalizeTransaction({
+          timestamp,
+          type,
+          assetSymbol: symbol.replace(/USDT$/, "") || symbol,
+          qty,
+          price,
+          venue: exchange,
+          source: "import"
+        });
+
+        rows.push(row);
+        timestamps.push(timestamp);
+
+        if (!KNOWN_ASSETS.includes(row.assetSymbol)) {
+          warnings.push(`Row ${i + 1}, symbol ${row.assetSymbol} is not in the current Worker cache set`);
+        }
+      }
+
+      const sortedTs = timestamps.sort((a, b) => a - b);
+      const dateRange = sortedTs.length ? `${formatDateShort(sortedTs[0])} → ${formatDateShort(sortedTs[sortedTs.length - 1])}` : "";
+      return { rows, skipped, warnings, dateRange };
+    }
+
+    function bindSearch() {
+      const input = $("global-search");
+      const results = $("search-results");
+      input.oninput = () => {
+        const q = input.value.trim().toLowerCase();
+        if (!q) {
+          results.classList.remove("visible");
+          results.innerHTML = "";
+          return;
+        }
+
+        const routeMatches = routes.filter(route => route.label.toLowerCase().includes(q));
+        const assetMatches = Array.from(new Set([
+          ...KNOWN_ASSETS,
+          ...state.transactions.map(tx => tx.assetSymbol),
+          ...state.prefs.watchlist
+        ])).filter(Boolean).filter(symbol => symbol.toLowerCase().includes(q)).slice(0, 5);
+
+        const combined = [
+          ...routeMatches.map(route => ({ type: "route", id: route.id, label: route.label, sub: route.subtitle })),
+          ...assetMatches.map(symbol => ({ type: "asset", id: "assets", label: symbol, sub: "Jump to Assets view" }))
+        ].slice(0, 8);
+
+        results.innerHTML = combined.map(item => `
+          <button type="button" data-search-type="${item.type}" data-search-id="${item.id}">
+            <strong>${escapeHtml(item.label)}</strong><br />
+            <span class="muted">${escapeHtml(item.sub || "")}</span>
+          </button>
+        `).join("");
+
+        results.classList.toggle("visible", combined.length > 0);
+        results.querySelectorAll("button").forEach(btn => {
+          btn.onclick = () => {
+            state.route = btn.getAttribute("data-search-id");
+            render();
+            results.classList.remove("visible");
+            input.value = "";
+          };
+        });
+      };
+    }
+
+    $("refresh-button").addEventListener("click", refreshAll);
+    $("modal-close").addEventListener("click", closeModal);
+    $("modal-backdrop").addEventListener("click", event => {
+      if (event.target === $("modal-backdrop")) closeModal();
+    });
+
+    const dataList = document.createElement("datalist");
+    dataList.id = "asset-list";
+    dataList.innerHTML = KNOWN_ASSETS.map(symbol => `<option value="${symbol}"></option>`).join("");
+    document.body.appendChild(dataList);
+
+    loadLocalState();
+    applyPrefs();
+    bindSearch();
+    render();
+    refreshAll();
+  </script>
+</body>
+</html>
