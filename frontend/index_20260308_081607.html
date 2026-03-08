@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coin Compass Cloudflare</title>
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #121a2b;
+      --panel-2: #172036;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #25304a;
+      --accent: #60a5fa;
+      --good: #34d399;
+      --bad: #f87171;
+      --warn: #fbbf24;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    a { color: inherit; text-decoration: none; }
+    .app {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+    }
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: rgba(8, 14, 26, 0.88);
+      backdrop-filter: blur(10px);
+      padding: 20px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .brand-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+    .brand-text h1 { font-size: 18px; margin: 0; }
+    .brand-text p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .nav { display: grid; gap: 8px; margin-top: 18px; }
+    .nav button, .button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+    .nav button.active, .nav button:hover, .button:hover {
+      background: var(--panel-2);
+      border-color: #35507a;
+      transform: translateY(-1px);
+    }
+    .sidebar-footer {
+      margin-top: 24px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .main { padding: 24px; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+    .headline h2 { margin: 0; font-size: 28px; }
+    .headline p { margin: 6px 0 0; color: var(--muted); }
+    .stack, .grid { display: grid; gap: 18px; }
+    .grid.kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .card {
+      background: rgba(18, 26, 43, 0.92);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .card h3 { margin: 0 0 8px; font-size: 16px; }
+    .muted { color: var(--muted); }
+    .good { color: var(--good); }
+    .bad { color: var(--bad); }
+    .warn { color: var(--warn); }
+    .kpi-label { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+    .kpi-value { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .space { justify-content: space-between; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: #111827;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .status-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--warn); display: inline-block; }
+    .status-dot.ok { background: var(--good); }
+    .status-dot.fail { background: var(--bad); }
+    .table-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 14px; }
+    table { width: 100%; border-collapse: collapse; min-width: 720px; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid var(--border); text-align: left; font-size: 14px; }
+    th { color: var(--muted); background: rgba(12, 18, 30, 0.9); position: sticky; top: 0; }
+    tr:last-child td { border-bottom: 0; }
+    form { display: grid; gap: 14px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    label { display: grid; gap: 8px; font-size: 14px; color: var(--muted); }
+    input, select, textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0c1322;
+      color: var(--text);
+      padding: 12px 14px;
+      font: inherit;
+    }
+    textarea { min-height: 88px; resize: vertical; }
+    .button.primary { background: linear-gradient(135deg, #2563eb, #4f46e5); border-color: transparent; }
+    .button.ghost { background: transparent; }
+    .empty { padding: 28px; border: 1px dashed var(--border); border-radius: 14px; text-align: center; color: var(--muted); }
+    .footer-note { margin-top: 20px; font-size: 13px; color: var(--muted); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+    .section-title { margin-bottom: 12px; }
+    .mini-list { display: grid; gap: 10px; }
+    .mini-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(12, 18, 30, 0.55);
+      border: 1px solid rgba(37, 48, 74, 0.75);
+    }
+    .progress {
+      width: 100%;
+      height: 10px;
+      background: #0c1322;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress > span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, #2563eb, #34d399);
+      width: 0%;
+    }
+    @media (max-width: 1100px) { .grid.kpis, .grid.two, .grid.three { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border); }
+      .main { padding: 18px; }
+      .topbar { flex-direction: column; }
+    }
+    @media (max-width: 640px) {
+      .grid.kpis, .grid.two, .grid.three, .form-grid { grid-template-columns: 1fr; }
+      .headline h2 { font-size: 23px; }
+      .kpi-value { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">CC</div>
+        <div class="brand-text">
+          <h1>Coin Compass</h1>
+          <p>Static frontend, Worker backend</p>
+        </div>
+      </div>
+      <nav class="nav" id="nav"></nav>
+      <div class="sidebar-footer">
+        This repo is now wired for GitHub-driven Cloudflare deployment. Frontend changes go to Pages through Git push, backend changes can be deployed immediately through Wrangler plus the GitHub workflow.
+      </div>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <div class="headline">
+          <h2 id="page-title">Overview</h2>
+          <p id="page-subtitle">Monitor the Worker, prices, holdings, and app state from one static file.</p>
+        </div>
+        <div class="row">
+          <div class="pill"><span class="status-dot" id="status-dot"></span><span id="status-text">Checking backend...</span></div>
+          <button class="button" id="refresh-button" type="button">Refresh</button>
+        </div>
+      </div>
+      <div id="view" class="stack"></div>
+      <div class="footer-note">This file can be edited directly, committed to GitHub, and auto-deployed by Cloudflare Pages. The Worker URL is set through <span class="mono">const API_BASE</span>.</div>
+    </main>
+  </div>
+
+  <script>
+    const API_BASE = "https://coin-compass-api.taheito26.workers.dev";
+
+    const state = {
+      status: null,
+      prices: null,
+      transactions: [],
+      prefs: null,
+      holdings: [],
+      summary: {
+        totalValue: 0,
+        totalCost: 0,
+        unrealizedPnl: 0,
+        realizedPnl: 0
+      },
+      route: "overview",
+      loading: false,
+      error: ""
+    };
+
+    const routes = [
+      { id: "overview", label: "Overview", subtitle: "Health, latest prices, portfolio summary, and quick stats." },
+      { id: "holdings", label: "Holdings", subtitle: "Derived portfolio view built from your saved transactions." },
+      { id: "prices", label: "Prices", subtitle: "Live price cache coming from the Worker and KV." },
+      { id: "transactions", label: "Transactions", subtitle: "Sample app data persisted in KV through the Worker." },
+      { id: "settings", label: "Settings", subtitle: "Tracking preferences stored server-side in KV." }
+    ];
+
+    function $(id) { return document.getElementById(id); }
+
+    function formatDate(ts) {
+      return ts ? new Date(ts).toLocaleString() : "n/a";
+    }
+
+    function formatNumber(value, digits = 2) {
+      const n = Number(value);
+      return Number.isFinite(n)
+        ? n.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits })
+        : "-";
+    }
+
+    function formatCurrency(value, digits = 2) {
+      const n = Number(value);
+      return Number.isFinite(n)
+        ? `$${n.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits })}`
+        : "-";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    async function api(path, options = {}) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options
+      });
+
+      if (!res.ok) {
+        let message = `Request failed, ${res.status}`;
+        try {
+          const data = await res.json();
+          if (data && data.error) message = data.error;
+        } catch (_) {}
+        throw new Error(message);
+      }
+
+      return res.json();
+    }
+
+    function renderNav() {
+      const nav = $("nav");
+      nav.innerHTML = "";
+      routes.forEach(route => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = route.label;
+        btn.className = route.id === state.route ? "active" : "";
+        btn.onclick = () => {
+          state.route = route.id;
+          render();
+        };
+        nav.appendChild(btn);
+      });
+    }
+
+    function updateHeader() {
+      const route = routes.find(r => r.id === state.route);
+      $("page-title").textContent = route.label;
+      $("page-subtitle").textContent = route.subtitle;
+      const dot = $("status-dot");
+      const text = $("status-text");
+      dot.className = "status-dot";
+      if (!state.status) {
+        text.textContent = state.loading ? "Checking backend..." : "No data yet";
+        return;
+      }
+      if (state.status.ok) {
+        dot.classList.add("ok");
+        text.textContent = `Backend healthy, ${formatDate(state.status.lastUpdate)}`;
+      } else {
+        dot.classList.add("fail");
+        text.textContent = "Backend reachable, but price cache is empty";
+      }
+    }
+
+    function renderKpi(label, value, note, tone = "") {
+      return `<div class="card"><div class="kpi-label">${label}</div><div class="kpi-value ${tone}">${value}</div><div class="muted">${note}</div></div>`;
+    }
+
+    function derivePortfolio() {
+      const prices = state.prices?.prices || {};
+      const map = new Map();
+
+      for (const item of state.transactions || []) {
+        const symbol = String(item.assetSymbol || item.asset_symbol || "").toUpperCase().trim();
+        if (!symbol) continue;
+
+        const type = String(item.type || "buy").toLowerCase();
+        const qty = Number(item.qty);
+        const price = Number(item.price);
+
+        if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(price) || price < 0) continue;
+
+        if (!map.has(symbol)) {
+          map.set(symbol, {
+            symbol,
+            qty: 0,
+            costBasis: 0,
+            avgCost: 0,
+            livePrice: Number(prices[symbol]?.usd) || 0,
+            marketValue: 0,
+            unrealizedPnl: 0,
+            realizedPnl: 0,
+            lastUpdated: prices[symbol]?.updatedAt || state.prices?.ts || null
+          });
+        }
+
+        const row = map.get(symbol);
+
+        if (type === "buy") {
+          row.costBasis += qty * price;
+          row.qty += qty;
+        } else if (type === "sell") {
+          const sellQty = Math.min(qty, row.qty);
+          const avgCost = row.qty > 0 ? row.costBasis / row.qty : 0;
+          row.realizedPnl += (price - avgCost) * sellQty;
+          row.costBasis -= avgCost * sellQty;
+          row.qty -= sellQty;
+          if (row.qty < 1e-10) {
+            row.qty = 0;
+            row.costBasis = 0;
+          }
+        }
+
+        row.avgCost = row.qty > 0 ? row.costBasis / row.qty : 0;
+      }
+
+      const holdings = Array.from(map.values())
+        .filter(row => row.qty > 0 || Math.abs(row.realizedPnl) > 0.000001)
+        .map(row => {
+          row.livePrice = Number(prices[row.symbol]?.usd) || 0;
+          row.lastUpdated = prices[row.symbol]?.updatedAt || state.prices?.ts || null;
+          row.marketValue = row.qty * row.livePrice;
+          row.unrealizedPnl = row.marketValue - row.costBasis;
+          return row;
+        })
+        .sort((a, b) => b.marketValue - a.marketValue);
+
+      const summary = holdings.reduce((acc, row) => {
+        acc.totalValue += row.marketValue;
+        acc.totalCost += row.costBasis;
+        acc.unrealizedPnl += row.unrealizedPnl;
+        acc.realizedPnl += row.realizedPnl;
+        return acc;
+      }, { totalValue: 0, totalCost: 0, unrealizedPnl: 0, realizedPnl: 0 });
+
+      state.holdings = holdings;
+      state.summary = summary;
+    }
+
+    function renderOverview() {
+      const latest = state.prices?.prices || {};
+      const topAssets = Object.entries(latest).slice(0, 5).map(([symbol, info]) => `
+        <tr><td>${escapeHtml(symbol)}</td><td>${formatCurrency(info.usd)}</td><td>${formatDate(info.updatedAt || state.prices?.ts)}</td></tr>
+      `).join("");
+
+      const allocation = state.summary.totalValue > 0
+        ? state.holdings.slice(0, 5).map(row => {
+            const percent = Math.max(0, Math.min(100, (row.marketValue / state.summary.totalValue) * 100));
+            return `
+              <div class="mini-item">
+                <div>
+                  <div><strong>${escapeHtml(row.symbol)}</strong></div>
+                  <div class="muted">${formatNumber(row.qty, 6)} units, ${formatCurrency(row.marketValue)}</div>
+                </div>
+                <div style="min-width: 140px; width: 40%;">
+                  <div class="muted" style="text-align:right; margin-bottom: 6px;">${formatNumber(percent, 1)}%</div>
+                  <div class="progress"><span style="width:${percent}%"></span></div>
+                </div>
+              </div>
+            `;
+          }).join("")
+        : `<div class="empty">Add transactions to build portfolio allocation.</div>`;
+
+      return `
+        <section class="grid kpis">
+          ${renderKpi("Portfolio value", formatCurrency(state.summary.totalValue), "Live mark-to-market value from Worker prices")}
+          ${renderKpi("Cost basis", formatCurrency(state.summary.totalCost), "Derived from saved buy and sell transactions")}
+          ${renderKpi("Unrealized P&L", formatCurrency(state.summary.unrealizedPnl), "Open-position gain or loss", state.summary.unrealizedPnl >= 0 ? "good" : "bad")}
+          ${renderKpi("Realized P&L", formatCurrency(state.summary.realizedPnl), "Closed-position gain or loss", state.summary.realizedPnl >= 0 ? "good" : "bad")}
+          ${renderKpi("Backend status", state.status?.ok ? "Healthy" : "Not ready", `Provider: ${escapeHtml(state.status?.provider || "n/a")}`, state.status?.ok ? "good" : "warn")}
+          ${renderKpi("Tracked assets", String(Object.keys(latest).length), "Assets with latest cached prices")}
+          ${renderKpi("Active holdings", String(state.holdings.filter(x => x.qty > 0).length), "Assets still held in the portfolio")}
+          ${renderKpi("Transactions", String(state.transactions.length), "Persisted in APP_KV")}
+        </section>
+        <section class="grid two">
+          <div class="card">
+            <div class="row space section-title"><h3>Top live prices</h3><span class="pill">Updated ${formatDate(state.prices?.ts)}</span></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Asset</th><th>USD</th><th>Updated</th></tr></thead>
+                <tbody>
+                  ${topAssets || `<tr><td colspan="3"><div class="empty">No prices yet. Use Refresh after the Worker cron or call /api/prices.</div></td></tr>`}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row space section-title"><h3>Portfolio allocation</h3><span class="pill">${state.holdings.length} rows</span></div>
+            <div class="mini-list">${allocation}</div>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderHoldings() {
+      const rows = state.holdings.map(row => `
+        <tr>
+          <td>${escapeHtml(row.symbol)}</td>
+          <td>${formatNumber(row.qty, 6)}</td>
+          <td>${formatCurrency(row.avgCost)}</td>
+          <td>${formatCurrency(row.livePrice)}</td>
+          <td>${formatCurrency(row.costBasis)}</td>
+          <td>${formatCurrency(row.marketValue)}</td>
+          <td class="${row.unrealizedPnl >= 0 ? "good" : "bad"}">${formatCurrency(row.unrealizedPnl)}</td>
+          <td class="${row.realizedPnl >= 0 ? "good" : "bad"}">${formatCurrency(row.realizedPnl)}</td>
+        </tr>
+      `).join("");
+
+      return `
+        <section class="grid kpis">
+          ${renderKpi("Open value", formatCurrency(state.summary.totalValue), "Current market value")}
+          ${renderKpi("Open cost", formatCurrency(state.summary.totalCost), "Cost basis of still-held units")}
+          ${renderKpi("Open P&L", formatCurrency(state.summary.unrealizedPnl), "Unrealized gain or loss", state.summary.unrealizedPnl >= 0 ? "good" : "bad")}
+          ${renderKpi("Closed P&L", formatCurrency(state.summary.realizedPnl), "Realized gain or loss", state.summary.realizedPnl >= 0 ? "good" : "bad")}
+        </section>
+        <div class="card">
+          <div class="row space section-title">
+            <h3>Derived holdings</h3>
+            <span class="pill">Built from ${state.transactions.length} transactions</span>
+          </div>
+          <p class="muted">This table is calculated client-side from your saved transactions. Buys increase cost basis, sells reduce basis using the running average cost of the position.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Asset</th>
+                  <th>Qty</th>
+                  <th>Avg cost</th>
+                  <th>Live price</th>
+                  <th>Cost basis</th>
+                  <th>Market value</th>
+                  <th>Unrealized P&L</th>
+                  <th>Realized P&L</th>
+                </tr>
+              </thead>
+              <tbody>${rows || `<tr><td colspan="8"><div class="empty">No holdings yet. Add buy transactions first.</div></td></tr>`}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPrices() {
+      const rows = Object.entries(state.prices?.prices || {}).map(([symbol, info]) => `
+        <tr><td>${escapeHtml(symbol)}</td><td>${formatCurrency(info.usd)}</td><td>${formatDate(info.updatedAt || state.prices?.ts)}</td></tr>
+      `).join("");
+
+      return `
+        <div class="card">
+          <div class="row space section-title"><h3>Price cache</h3><button class="button" type="button" onclick="refreshAll()">Refresh data</button></div>
+          <p class="muted">The Worker stores the latest price object and a rolling history in KV. Right now your live backend is healthy and using the Binance fallback when CoinGecko refuses the request.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Asset</th><th>USD</th><th>Updated</th></tr></thead>
+              <tbody>${rows || `<tr><td colspan="3"><div class="empty">No price data yet.</div></td></tr>`}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderTransactions() {
+      const rows = state.transactions.map(item => `
+        <tr>
+          <td>${formatDate(item.timestamp)}</td>
+          <td>${escapeHtml(item.type)}</td>
+          <td>${escapeHtml(item.assetSymbol)}</td>
+          <td>${formatNumber(item.qty, 6)}</td>
+          <td>${formatCurrency(item.price)}</td>
+          <td>${escapeHtml(item.note || "-")}</td>
+        </tr>
+      `).join("");
+
+      return `
+        <div class="grid two">
+          <div class="card">
+            <h3>Add transaction</h3>
+            <form id="tx-form">
+              <div class="form-grid">
+                <label>Type
+                  <select name="type" required>
+                    <option value="buy">buy</option>
+                    <option value="sell">sell</option>
+                  </select>
+                </label>
+                <label>Asset symbol
+                  <select name="assetSymbol" required id="tx-asset">
+                    <option value="BTC">BTC</option>
+                    <option value="ETH">ETH</option>
+                    <option value="SOL">SOL</option>
+                    <option value="XRP">XRP</option>
+                    <option value="BNB">BNB</option>
+                    <option value="USDT">USDT</option>
+                  </select>
+                </label>
+                <label>Quantity
+                  <input name="qty" type="number" step="0.000001" min="0" required />
+                </label>
+                <label>Price in USD
+                  <input name="price" id="tx-price" type="number" step="0.000001" min="0" required />
+                </label>
+              </div>
+              <div class="row">
+                <button class="button" type="button" id="fill-live-price">Use live price</button>
+                <span class="muted">This will fill the price field from the latest Worker cache.</span>
+              </div>
+              <label>Note
+                <textarea name="note" placeholder="Optional note"></textarea>
+              </label>
+              <div class="row"><button class="button primary" type="submit">Save transaction</button></div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>Saved transactions</h3>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Timestamp</th><th>Type</th><th>Asset</th><th>Qty</th><th>Price</th><th>Note</th></tr></thead>
+                <tbody>${rows || `<tr><td colspan="6"><div class="empty">No transactions saved yet.</div></td></tr>`}</tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSettings() {
+      const prefs = state.prefs || { baseCurrency: "USD", watchlist: ["BTC", "ETH", "SOL"] };
+      return `
+        <div class="grid two">
+          <div class="card">
+            <h3>Tracking preferences</h3>
+            <form id="prefs-form">
+              <label>Base currency
+                <select name="baseCurrency">
+                  <option value="USD" ${prefs.baseCurrency === "USD" ? "selected" : ""}>USD</option>
+                </select>
+              </label>
+              <label>Watchlist, comma-separated symbols
+                <input name="watchlist" value="${escapeHtml((prefs.watchlist || []).join(", "))}" />
+              </label>
+              <div class="row"><button class="button primary" type="submit">Save preferences</button></div>
+            </form>
+          </div>
+          <div class="card">
+            <h3>Deployment values</h3>
+            <p class="muted">This file is already wired to your live Worker. Keep frontend deployment Git-based and let the script handle Git push plus optional backend deploy.</p>
+            <p class="mono">const API_BASE = "${API_BASE}";</p>
+            <p class="muted">Current provider: ${escapeHtml(state.status?.provider || "n/a")}, cache ready: ${state.status?.cacheReady ? "yes" : "no"}.</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function bindForms() {
+      const txForm = $("tx-form");
+      if (txForm) {
+        txForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const form = new FormData(txForm);
+          const payload = {
+            type: String(form.get("type") || "buy"),
+            assetSymbol: String(form.get("assetSymbol") || "BTC"),
+            qty: Number(form.get("qty")),
+            price: Number(form.get("price")),
+            note: String(form.get("note") || "").trim()
+          };
+
+          try {
+            await api("/api/transactions", { method: "POST", body: JSON.stringify(payload) });
+            txForm.reset();
+            await refreshAll();
+            state.route = "transactions";
+            render();
+          } catch (error) {
+            alert(error.message);
+          }
+        });
+
+        const fillLivePriceButton = $("fill-live-price");
+        if (fillLivePriceButton) {
+          fillLivePriceButton.addEventListener("click", () => {
+            const symbol = $("tx-asset")?.value;
+            const live = state.prices?.prices?.[symbol]?.usd;
+            if (!Number.isFinite(Number(live))) {
+              alert("No live price found for that asset yet.");
+              return;
+            }
+            $("tx-price").value = String(live);
+          });
+        }
+      }
+
+      const prefsForm = $("prefs-form");
+      if (prefsForm) {
+        prefsForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const form = new FormData(prefsForm);
+          const payload = {
+            baseCurrency: String(form.get("baseCurrency") || "USD"),
+            watchlist: String(form.get("watchlist") || "")
+              .split(",")
+              .map(v => v.trim().toUpperCase())
+              .filter(Boolean)
+          };
+
+          try {
+            await api("/api/tracking-preferences", { method: "PUT", body: JSON.stringify(payload) });
+            await refreshAll();
+            state.route = "settings";
+            render();
+          } catch (error) {
+            alert(error.message);
+          }
+        });
+      }
+    }
+
+    function render() {
+      renderNav();
+      updateHeader();
+      const view = $("view");
+
+      if (state.error) {
+        view.innerHTML = `<div class="card"><div class="bad"><strong>Error:</strong> ${escapeHtml(state.error)}</div><p class="muted">Check your Worker URL and Cloudflare deployment settings.</p></div>`;
+        return;
+      }
+
+      if (state.loading && !state.status) {
+        view.innerHTML = `<div class="card"><div class="empty">Loading...</div></div>`;
+        return;
+      }
+
+      if (state.route === "overview") view.innerHTML = renderOverview();
+      if (state.route === "holdings") view.innerHTML = renderHoldings();
+      if (state.route === "prices") view.innerHTML = renderPrices();
+      if (state.route === "transactions") view.innerHTML = renderTransactions();
+      if (state.route === "settings") view.innerHTML = renderSettings();
+
+      bindForms();
+    }
+
+    async function refreshAll() {
+      state.loading = true;
+      state.error = "";
+      render();
+
+      try {
+        const [status, prices, transactions, prefs] = await Promise.all([
+          api("/api/status"),
+          api("/api/prices"),
+          api("/api/transactions"),
+          api("/api/tracking-preferences")
+        ]);
+
+        state.status = status;
+        state.prices = prices;
+        state.transactions = transactions.items || [];
+        state.prefs = prefs;
+        derivePortfolio();
+      } catch (error) {
+        state.error = error.message;
+      } finally {
+        state.loading = false;
+        render();
+      }
+    }
+
+    $("refresh-button").addEventListener("click", refreshAll);
+    render();
+    refreshAll();
+  </script>
+</body>
+</html>
